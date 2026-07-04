@@ -1,0 +1,4 @@
+interface:
+  display_name: "Post-push README Check"
+  short_description: "Check project docs after each push"
+  default_prompt: "Use $post-push-readme-check after pushing changes to decide whether README needs a follow-up update."

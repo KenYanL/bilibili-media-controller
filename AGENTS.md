@@ -40,3 +40,8 @@ Not lazy about:
 - Anything explicitly requested.
 
 Lazy code without its check is unfinished: non-trivial logic leaves ONE runnable check behind, the smallest thing that fails if the logic breaks, such as an assert-based demo/self-check or one small test file. No frameworks, no fixtures. Trivial one-liners need no test.
+
+## Project maintenance memory
+
+- For future updates to this repository, use `.codex/skills/bilibili-github-push-method` before pushing. This project was successfully pushed with HTTPS plus `gh auth git-credential`; SSH `origin` existed but failed with `Permission denied (publickey)`.
+- After every successful push, use `.codex/skills/post-push-readme-check` to decide whether `README.md` or install docs need a follow-up update.

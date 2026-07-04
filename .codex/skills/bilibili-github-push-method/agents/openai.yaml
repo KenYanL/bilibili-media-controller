@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bilibili GitHub Push Method"
+  short_description: "Remember project GitHub push method"
+  default_prompt: "Use $bilibili-github-push-method to push this project with the remembered GitHub credential workflow."
