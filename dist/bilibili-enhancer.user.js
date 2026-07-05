@@ -28,9 +28,12 @@
     '.squirtle-subtitle-wrap > button',
     '.bpui-btn[title*="字幕"]'
   ].join(',');
+  const DEFAULT_PLAYBACK_RATE = 1;
   let cleanupKeymap = null;
   let cleanup = null;
   let toastTimer = null;
+  const globalPreferenceStore = createGlobalPreferenceStore();
+  const videoInstanceState = createVideoInstanceState({ preferenceStore: globalPreferenceStore });
 
   if (location.hostname !== BILIBILI_HOST) return;
   if (!VIDEO_PATH_RE.test(location.pathname)) return;
@@ -50,6 +53,49 @@
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
+  }
+
+  function sanitizePlaybackRate(value) {
+    const rate = Number(value);
+    return Number.isFinite(rate) && rate > 0 ? rate : DEFAULT_PLAYBACK_RATE;
+  }
+
+  function createGlobalPreferenceStore(options = {}) {
+    let defaultPlaybackRate = sanitizePlaybackRate(options.defaultPlaybackRate);
+
+    return {
+      getDefaultPlaybackRate() {
+        return defaultPlaybackRate;
+      },
+      setDefaultPlaybackRate(value) {
+        defaultPlaybackRate = sanitizePlaybackRate(value);
+        return defaultPlaybackRate;
+      }
+    };
+  }
+
+  function createVideoInstanceState(options = {}) {
+    const preferenceStore = options.preferenceStore || createGlobalPreferenceStore();
+    const stateByMedia = new WeakMap();
+
+    function createState() {
+      return {
+        playbackRate: preferenceStore.getDefaultPlaybackRate()
+      };
+    }
+
+    return {
+      ensure(media) {
+        if (!(media instanceof HTMLMediaElement)) return null;
+        if (!stateByMedia.has(media)) {
+          stateByMedia.set(media, createState());
+        }
+        return stateByMedia.get(media);
+      },
+      get(media) {
+        return stateByMedia.get(media) || null;
+      }
+    };
   }
 
   function getPlayerRoot(documentRef = document) {
@@ -76,26 +122,14 @@
   function createMediaCore(options = {}) {
     const documentRef = options.document || document;
     const locationRef = options.location || window.location;
+    const videoState = options.videoState || null;
 
     function getMedia() {
-      return getScopedMedia(documentRef, locationRef);
-    }
-
-    function setPlaybackRate(rate) {
-      const media = getMedia();
-      if (!media) return false;
-
-      const nextRate = Number(clamp(Number(rate), 0.1, 16).toFixed(1));
-      if (Number.isNaN(nextRate)) return false;
-
-      media.playbackRate = nextRate;
-      return nextRate;
-    }
-
-    function changePlaybackRate(delta) {
-      const media = getMedia();
-      if (!media) return false;
-      return setPlaybackRate(media.playbackRate + delta);
+      const media = getScopedMedia(documentRef, locationRef);
+      if (media && videoState) {
+        videoState.ensure(media);
+      }
+      return media;
     }
 
     function seekBy(seconds) {
@@ -143,12 +177,14 @@
 
     return {
       getMedia,
-      setPlaybackRate,
-      changePlaybackRate,
       seekBy,
       setVolume,
       changeVolume,
-      togglePlay
+      togglePlay,
+      getVideoState() {
+        const media = getMedia();
+        return media && videoState ? videoState.get(media) : null;
+      }
     };
   }
 
@@ -225,10 +261,6 @@
 
   function isPlainKey(event, key) {
     return !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === key;
-  }
-
-  function isShiftKey(event, key, code) {
-    return event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && (event.key === key || event.code === code);
   }
 
   function consume(event) {
@@ -322,22 +354,6 @@
         return;
       }
 
-      if (isShiftKey(event, '>', 'Period')) {
-        const rate = media.changePlaybackRate(0.1);
-        if (rate !== false) {
-          consume(event);
-          notify(`${rate}x`);
-        }
-        return;
-      }
-
-      if (isShiftKey(event, '<', 'Comma')) {
-        const rate = media.changePlaybackRate(-0.1);
-        if (rate !== false) {
-          consume(event);
-          notify(`${rate}x`);
-        }
-      }
     }
 
     documentRef.addEventListener('keydown', onKeyDown);
@@ -357,7 +373,12 @@
     ready(() => {
       if (!isBilibiliVideoPage()) return;
 
-      const media = createMediaCore({ document, location });
+      const media = createMediaCore({
+        document,
+        location,
+        videoState: videoInstanceState
+      });
+      media.getMedia();
       cleanup = initKeymap({
         document,
         location,

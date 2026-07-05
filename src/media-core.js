@@ -41,26 +41,14 @@ function getScopedMedia(documentRef = document, locationRef = window.location) {
 export function createMediaCore(options = {}) {
   const documentRef = options.document || document;
   const locationRef = options.location || window.location;
+  const videoState = options.videoState || null;
 
   function getMedia() {
-    return getScopedMedia(documentRef, locationRef);
-  }
-
-  function setPlaybackRate(rate) {
-    const media = getMedia();
-    if (!media) return false;
-
-    const nextRate = Number(clamp(Number(rate), 0.1, 16).toFixed(1));
-    if (Number.isNaN(nextRate)) return false;
-
-    media.playbackRate = nextRate;
-    return nextRate;
-  }
-
-  function changePlaybackRate(delta) {
-    const media = getMedia();
-    if (!media) return false;
-    return setPlaybackRate(media.playbackRate + delta);
+    const media = getScopedMedia(documentRef, locationRef);
+    if (media && videoState) {
+      videoState.ensure(media);
+    }
+    return media;
   }
 
   function seekBy(seconds) {
@@ -108,12 +96,13 @@ export function createMediaCore(options = {}) {
 
   return {
     getMedia,
-    setPlaybackRate,
-    changePlaybackRate,
     seekBy,
     setVolume,
     changeVolume,
-    togglePlay
+    togglePlay,
+    getVideoState() {
+      const media = getMedia();
+      return media && videoState ? videoState.get(media) : null;
+    }
   };
 }
-

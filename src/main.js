@@ -1,11 +1,14 @@
 import { createMediaCore } from './media-core.js';
 import { toggleSubtitle } from './bilibili-subtitle.js';
 import { initKeymap } from './keymap.js';
+import { createGlobalPreferenceStore, createVideoInstanceState } from './playback-speed-state.js';
 
 const BILIBILI_HOST = 'www.bilibili.com';
 const VIDEO_PATH_RE = /^\/video\//;
 let cleanup = null;
 let toastTimer = null;
+const globalPreferenceStore = createGlobalPreferenceStore();
+const videoInstanceState = createVideoInstanceState({ preferenceStore: globalPreferenceStore });
 
 function isBilibiliVideoPage(locationRef = window.location) {
   return locationRef.hostname === BILIBILI_HOST && VIDEO_PATH_RE.test(locationRef.pathname);
@@ -60,7 +63,12 @@ export function initBilibiliEnhancer() {
   ready(() => {
     if (!isBilibiliVideoPage()) return;
 
-    const media = createMediaCore({ document, location });
+    const media = createMediaCore({
+      document,
+      location,
+      videoState: videoInstanceState
+    });
+    media.getMedia();
     cleanup = initKeymap({
       document,
       location,

@@ -18,10 +18,6 @@ function isPlainKey(event, key) {
   return !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === key;
 }
 
-function isShiftKey(event, key, code) {
-  return event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && (event.key === key || event.code === code);
-}
-
 function consume(event) {
   event.preventDefault();
   event.stopPropagation();
@@ -82,22 +78,6 @@ export function initKeymap(options = {}) {
       return;
     }
 
-    if (isShiftKey(event, '>', 'Period')) {
-      const rate = media.changePlaybackRate(0.1);
-      if (rate !== false) {
-        consume(event);
-        notify(`${rate}x`);
-      }
-      return;
-    }
-
-    if (isShiftKey(event, '<', 'Comma')) {
-      const rate = media.changePlaybackRate(-0.1);
-      if (rate !== false) {
-        consume(event);
-        notify(`${rate}x`);
-      }
-    }
   }
 
   documentRef.addEventListener('keydown', onKeyDown);
@@ -109,4 +89,3 @@ export function initKeymap(options = {}) {
 
   return cleanupKeymap;
 }
-
