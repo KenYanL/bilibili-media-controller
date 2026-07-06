@@ -90,6 +90,7 @@ export function initBilibiliEnhancer() {
       document,
       location,
       media,
+      speedController,
       toggleSubtitle: () => toggleSubtitle({ document, location }),
       notify
     });

@@ -8,6 +8,8 @@ A lightweight Tampermonkey script for Bilibili video enhancement.
 - J: rewind 5s
 - L: forward 5s
 - K: play/pause
+- Shift+<: decrease playback speed by 0.25x
+- Shift+>: increase playback speed by 0.25x
 
 ## Scope
 
@@ -33,6 +35,8 @@ dist/bilibili-enhancer.user.js
 - J：后退 5 秒
 - L：前进 5 秒
 - K：播放/暂停
+- Shift+<：降低 0.25x 播放速度
+- Shift+>：提高 0.25x 播放速度
 
 ## 作用范围
 
