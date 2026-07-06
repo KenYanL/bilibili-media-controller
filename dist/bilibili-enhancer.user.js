@@ -14,6 +14,7 @@
 
   const BILIBILI_HOST = 'www.bilibili.com';
   const VIDEO_PATH_RE = /^\/video\//;
+  const HUD_ID = 'bilibili-enhancer-lite-hud';
   const PLAYER_ROOT_SELECTOR = [
     '.bpx-player-container',
     '#bilibili-player',
@@ -329,35 +330,96 @@
     event.stopPropagation();
   }
 
-  function notify(message) {
-    let toast = document.querySelector('#bilibili-enhancer-lite-toast');
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.id = 'bilibili-enhancer-lite-toast';
-      Object.assign(toast.style, {
+  function getHudRoot(documentRef = document) {
+    return (
+      documentRef.fullscreenElement ||
+      documentRef.querySelector('.bpx-player-container') ||
+      documentRef.querySelector('.bpx-player') ||
+      documentRef.body
+    );
+  }
+
+  function getHudScale(viewport = {}) {
+    const width = viewport.width ?? window.innerWidth;
+    const height = viewport.height ?? window.innerHeight;
+    return Math.min(width / 1920, height / 1080);
+  }
+
+  function mountHUD(hud, documentRef = document) {
+    const root = getHudRoot(documentRef);
+    if (!root || hud.parentElement === root) return;
+    root.appendChild(hud);
+  }
+
+  function updateHUDScale(hud) {
+    const scale = getHudScale();
+    hud.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  }
+
+  function ensureHUD(documentRef = document) {
+    let hud = documentRef.querySelector(`#${HUD_ID}`);
+    if (!hud) {
+      hud = documentRef.createElement('div');
+      hud.id = HUD_ID;
+      Object.assign(hud.style, {
         position: 'fixed',
+        top: '50%',
         left: '50%',
-        top: '18%',
-        zIndex: '2147483647',
-        transform: 'translateX(-50%)',
-        padding: '6px 10px',
-        borderRadius: '6px',
-        background: 'rgba(0, 0, 0, 0.72)',
-        color: '#fff',
-        fontSize: '13px',
-        lineHeight: '18px',
+        transform: 'translate(-50%, -50%)',
+        zIndex: '999999',
         pointerEvents: 'none',
+        fontSize: '48px',
+        fontWeight: 'bold',
+        color: '#fff',
+        textShadow: '0 2px 8px rgba(0,0,0,0.8)',
         opacity: '0',
         transition: 'opacity 120ms ease'
       });
-      document.documentElement.appendChild(toast);
     }
 
-    toast.textContent = message;
-    toast.style.opacity = '1';
+    mountHUD(hud, documentRef);
+    updateHUDScale(hud);
+    return hud;
+  }
+
+  function bindHUDLifecycle(hud, documentRef = document, windowRef = window) {
+    const reattach = () => {
+      const root = getHudRoot(documentRef);
+      if (!root) return;
+      if (!root.contains(hud)) {
+        root.appendChild(hud);
+      }
+      updateHUDScale(hud);
+    };
+
+    documentRef.addEventListener('fullscreenchange', reattach);
+    windowRef.addEventListener('resize', reattach);
+
+    const observer = new MutationObserver(() => {
+      reattach();
+    });
+    observer.observe(documentRef.body, {
+      childList: true,
+      subtree: true
+    });
+
+    reattach();
+
+    return () => {
+      documentRef.removeEventListener('fullscreenchange', reattach);
+      windowRef.removeEventListener('resize', reattach);
+      observer.disconnect();
+    };
+  }
+
+  function notify(hud, message) {
+    mountHUD(hud);
+    updateHUDScale(hud);
+    hud.textContent = message;
+    hud.style.opacity = '1';
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
-      toast.style.opacity = '0';
+      hud.style.opacity = '0';
     }, 800);
   }
 
@@ -459,6 +521,8 @@
     ready(() => {
       if (!isBilibiliVideoPage()) return;
 
+      const hud = ensureHUD(document);
+      const cleanupHUDLifecycle = bindHUDLifecycle(hud, document, window);
       const media = createMediaCore({
         document,
         location,
@@ -472,8 +536,14 @@
         location,
         media,
         speedController,
-        toggleSubtitle: () => toggleSubtitle({ document, location })
+        toggleSubtitle: () => toggleSubtitle({ document, location }),
+        notify: message => notify(hud, message)
       });
+      const cleanupKeymap = cleanup;
+      cleanup = () => {
+        cleanupHUDLifecycle();
+        cleanupKeymap();
+      };
     });
   }
 
