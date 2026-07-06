@@ -1,4 +1,5 @@
 import { createMediaCore } from './media-core.js';
+import { createSpeedController } from './playback-speed-controller.js';
 import { toggleSubtitle } from './bilibili-subtitle.js';
 import { initKeymap } from './keymap.js';
 import { createGlobalPreferenceStore, createVideoInstanceState } from './playback-speed-state.js';
@@ -55,12 +56,17 @@ function notify(message) {
   }, 800);
 }
 
-function bindMediaLifecycleInit(mediaCore) {
+function bindMediaLifecycleInit(mediaCore, speedController) {
   const activeMedia = mediaCore.getMedia();
   if (!activeMedia) return;
 
+  if (activeMedia.readyState >= HTMLMediaElement.HAVE_METADATA) {
+    speedController.syncPlaybackRate();
+    return;
+  }
+
   activeMedia.addEventListener('loadedmetadata', () => {
-    mediaCore.getMedia();
+    speedController.syncPlaybackRate();
   }, { once: true });
 }
 
@@ -77,8 +83,9 @@ export function initBilibiliEnhancer() {
       location,
       videoState: videoInstanceState
     });
-    media.getMedia();
-    bindMediaLifecycleInit(media);
+    const speedController = createSpeedController({ mediaCore: media });
+    speedController.syncPlaybackRate();
+    bindMediaLifecycleInit(media, speedController);
     cleanup = initKeymap({
       document,
       location,

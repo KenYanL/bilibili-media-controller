@@ -98,6 +98,60 @@
     };
   }
 
+  function clampPlaybackRate(value) {
+    const rate = Number(value);
+    if (!Number.isFinite(rate)) return 1;
+
+    const alignedRate = Math.round(rate / 0.25) * 0.25;
+    return Math.min(2, Math.max(0.25, alignedRate));
+  }
+
+  function createSpeedController(options = {}) {
+    const mediaCore = options.mediaCore || null;
+
+    function getCurrentMediaState() {
+      if (!mediaCore) return { media: null, state: null };
+
+      const media = mediaCore.getMedia();
+      if (!media) return { media: null, state: null };
+
+      return {
+        media,
+        state: mediaCore.getVideoState()
+      };
+    }
+
+    function applyPlaybackRate(media, state, value) {
+      if (!media || !state) return false;
+
+      const nextPlaybackRate = clampPlaybackRate(value);
+      state.playbackRate = nextPlaybackRate;
+      media.playbackRate = nextPlaybackRate;
+      return nextPlaybackRate;
+    }
+
+    return {
+      getPlaybackRate() {
+        const { state } = getCurrentMediaState();
+        return state ? state.playbackRate : null;
+      },
+      setPlaybackRate(value) {
+        const { media, state } = getCurrentMediaState();
+        return applyPlaybackRate(media, state, value);
+      },
+      changePlaybackRate(delta) {
+        const { media, state } = getCurrentMediaState();
+        if (!media || !state) return false;
+
+        return applyPlaybackRate(media, state, state.playbackRate + delta);
+      },
+      syncPlaybackRate() {
+        const { media, state } = getCurrentMediaState();
+        return applyPlaybackRate(media, state, state ? state.playbackRate : null);
+      }
+    };
+  }
+
   function getPlayerRoot(documentRef = document) {
     return documentRef.querySelector(PLAYER_ROOT_SELECTOR);
   }
@@ -300,12 +354,17 @@
     }, 800);
   }
 
-  function bindMediaLifecycleInit(mediaCore) {
+  function bindMediaLifecycleInit(mediaCore, speedController) {
     const activeMedia = mediaCore.getMedia();
     if (!activeMedia) return;
 
+    if (activeMedia.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      speedController.syncPlaybackRate();
+      return;
+    }
+
     activeMedia.addEventListener('loadedmetadata', () => {
-      mediaCore.getMedia();
+      speedController.syncPlaybackRate();
     }, { once: true });
   }
 
@@ -387,8 +446,9 @@
         location,
         videoState: videoInstanceState
       });
-      media.getMedia();
-      bindMediaLifecycleInit(media);
+      const speedController = createSpeedController({ mediaCore: media });
+      speedController.syncPlaybackRate();
+      bindMediaLifecycleInit(media, speedController);
       cleanup = initKeymap({
         document,
         location,
