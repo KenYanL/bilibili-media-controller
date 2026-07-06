@@ -1,4 +1,5 @@
 const DEFAULT_PLAYBACK_RATE = 1;
+const DEFAULT_PLAYBACK_RATE_STORAGE_KEY = 'bilibili-enhancer-lite.defaultPlaybackRate';
 
 function sanitizePlaybackRate(value) {
   const rate = Number(value);
@@ -6,7 +7,29 @@ function sanitizePlaybackRate(value) {
 }
 
 export function createGlobalPreferenceStore(options = {}) {
-  let defaultPlaybackRate = sanitizePlaybackRate(options.defaultPlaybackRate);
+  const storage = options.storage || (typeof window !== 'undefined' ? window.localStorage : null);
+  const storageKey = options.storageKey || DEFAULT_PLAYBACK_RATE_STORAGE_KEY;
+
+  function readStoredDefaultPlaybackRate() {
+    if (!storage || typeof storage.getItem !== 'function') return undefined;
+
+    try {
+      const storedValue = storage.getItem(storageKey);
+      return storedValue == null ? undefined : sanitizePlaybackRate(storedValue);
+    } catch {
+      return undefined;
+    }
+  }
+
+  function persistDefaultPlaybackRate(value) {
+    if (!storage || typeof storage.setItem !== 'function') return;
+
+    try {
+      storage.setItem(storageKey, String(value));
+    } catch {}
+  }
+
+  let defaultPlaybackRate = sanitizePlaybackRate(options.defaultPlaybackRate ?? readStoredDefaultPlaybackRate());
 
   return {
     getDefaultPlaybackRate() {
@@ -14,6 +37,7 @@ export function createGlobalPreferenceStore(options = {}) {
     },
     setDefaultPlaybackRate(value) {
       defaultPlaybackRate = sanitizePlaybackRate(value);
+      persistDefaultPlaybackRate(defaultPlaybackRate);
       return defaultPlaybackRate;
     }
   };

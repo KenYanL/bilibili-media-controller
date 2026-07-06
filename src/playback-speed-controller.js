@@ -12,6 +12,7 @@ export function clampPlaybackRate(value) {
 
 export function createSpeedController(options = {}) {
   const mediaCore = options.mediaCore || null;
+  const preferenceStore = options.preferenceStore || null;
 
   function getCurrentMediaState() {
     if (!mediaCore) return { media: null, state: null };
@@ -31,6 +32,9 @@ export function createSpeedController(options = {}) {
     const nextPlaybackRate = clampPlaybackRate(value);
     state.playbackRate = nextPlaybackRate;
     media.playbackRate = nextPlaybackRate;
+    if (preferenceStore && typeof preferenceStore.setDefaultPlaybackRate === 'function') {
+      preferenceStore.setDefaultPlaybackRate(nextPlaybackRate);
+    }
     console.log('[Speed]', nextPlaybackRate);
     return nextPlaybackRate;
   }

@@ -25,6 +25,10 @@ export function getPlaybackRateDelta(event) {
   return null;
 }
 
+export function formatPlaybackRateLabel(playbackRate) {
+  return `>> ${Number(playbackRate).toFixed(2)}x`;
+}
+
 function consume(event) {
   event.preventDefault();
   event.stopPropagation();
@@ -56,7 +60,7 @@ export function initKeymap(options = {}) {
       const nextPlaybackRate = speedController.changePlaybackRate(playbackRateDelta);
       if (nextPlaybackRate !== false) {
         consume(event);
-        notify(`${nextPlaybackRate.toFixed(2)}x`);
+        notify(formatPlaybackRateLabel(nextPlaybackRate));
       }
       return;
     }

@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 
-import { getHudScale } from '../src/main.js';
+import { getHudScale, HUD_AUTO_HIDE_DELAY_MS } from '../src/main.js';
 
 assert.equal(getHudScale({ width: 1920, height: 1080 }), 1);
 assert.equal(getHudScale({ width: 960, height: 1080 }), 0.5);
 assert.equal(getHudScale({ width: 1920, height: 540 }), 0.5);
+assert.equal(HUD_AUTO_HIDE_DELAY_MS, 300);
 
 console.log('main hud checks passed');

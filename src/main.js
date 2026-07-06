@@ -7,6 +7,7 @@ import { createGlobalPreferenceStore, createVideoInstanceState } from './playbac
 const BILIBILI_HOST = 'www.bilibili.com';
 const VIDEO_PATH_RE = /^\/video\//;
 const HUD_ID = 'bilibili-enhancer-lite-hud';
+export const HUD_AUTO_HIDE_DELAY_MS = 300;
 let cleanup = null;
 let toastTimer = null;
 const globalPreferenceStore = createGlobalPreferenceStore();
@@ -64,10 +65,17 @@ function ensureHUD(documentRef = document) {
       transform: 'translate(-50%, -50%)',
       zIndex: '999999',
       pointerEvents: 'none',
+      minWidth: '220px',
+      padding: '18px 28px',
+      borderRadius: '8px',
+      background: 'rgba(0,0,0,0.6)',
       fontSize: '48px',
       fontWeight: 'bold',
+      textAlign: 'center',
+      whiteSpace: 'nowrap',
       color: '#fff',
       textShadow: '0 2px 8px rgba(0,0,0,0.8)',
+      boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
       opacity: '0',
       transition: 'opacity 120ms ease'
     });
@@ -121,7 +129,7 @@ function notify(hud, message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
     hud.style.opacity = '0';
-  }, 800);
+  }, HUD_AUTO_HIDE_DELAY_MS);
 }
 
 function bindMediaLifecycleInit(mediaCore, speedController) {
@@ -153,7 +161,10 @@ export function initBilibiliEnhancer() {
       location,
       videoState: videoInstanceState
     });
-    const speedController = createSpeedController({ mediaCore: media });
+    const speedController = createSpeedController({
+      mediaCore: media,
+      preferenceStore: globalPreferenceStore
+    });
     speedController.syncPlaybackRate();
     bindMediaLifecycleInit(media, speedController);
     cleanup = initKeymap({

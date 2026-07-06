@@ -30,6 +30,8 @@
     '.bpui-btn[title*="字幕"]'
   ].join(',');
   const DEFAULT_PLAYBACK_RATE = 1;
+  const DEFAULT_PLAYBACK_RATE_STORAGE_KEY = 'bilibili-enhancer-lite.defaultPlaybackRate';
+  const HUD_AUTO_HIDE_DELAY_MS = 300;
   let cleanupKeymap = null;
   let cleanup = null;
   let toastTimer = null;
@@ -62,7 +64,29 @@
   }
 
   function createGlobalPreferenceStore(options = {}) {
-    let defaultPlaybackRate = sanitizePlaybackRate(options.defaultPlaybackRate);
+    const storage = options.storage || (typeof window !== 'undefined' ? window.localStorage : null);
+    const storageKey = options.storageKey || DEFAULT_PLAYBACK_RATE_STORAGE_KEY;
+
+    function readStoredDefaultPlaybackRate() {
+      if (!storage || typeof storage.getItem !== 'function') return undefined;
+
+      try {
+        const storedValue = storage.getItem(storageKey);
+        return storedValue == null ? undefined : sanitizePlaybackRate(storedValue);
+      } catch {
+        return undefined;
+      }
+    }
+
+    function persistDefaultPlaybackRate(value) {
+      if (!storage || typeof storage.setItem !== 'function') return;
+
+      try {
+        storage.setItem(storageKey, String(value));
+      } catch {}
+    }
+
+    let defaultPlaybackRate = sanitizePlaybackRate(options.defaultPlaybackRate ?? readStoredDefaultPlaybackRate());
 
     return {
       getDefaultPlaybackRate() {
@@ -70,6 +94,7 @@
       },
       setDefaultPlaybackRate(value) {
         defaultPlaybackRate = sanitizePlaybackRate(value);
+        persistDefaultPlaybackRate(defaultPlaybackRate);
         return defaultPlaybackRate;
       }
     };
@@ -109,6 +134,7 @@
 
   function createSpeedController(options = {}) {
     const mediaCore = options.mediaCore || null;
+    const preferenceStore = options.preferenceStore || null;
 
     function getCurrentMediaState() {
       if (!mediaCore) return { media: null, state: null };
@@ -128,6 +154,9 @@
       const nextPlaybackRate = clampPlaybackRate(value);
       state.playbackRate = nextPlaybackRate;
       media.playbackRate = nextPlaybackRate;
+      if (preferenceStore && typeof preferenceStore.setDefaultPlaybackRate === 'function') {
+        preferenceStore.setDefaultPlaybackRate(nextPlaybackRate);
+      }
       console.log('[Speed]', nextPlaybackRate);
       return nextPlaybackRate;
     }
@@ -326,6 +355,10 @@
     return null;
   }
 
+  function formatPlaybackRateLabel(playbackRate) {
+    return `>> ${Number(playbackRate).toFixed(2)}x`;
+  }
+
   function consume(event) {
     event.preventDefault();
     event.stopPropagation();
@@ -370,10 +403,17 @@
         transform: 'translate(-50%, -50%)',
         zIndex: '999999',
         pointerEvents: 'none',
+        minWidth: '220px',
+        padding: '18px 28px',
+        borderRadius: '8px',
+        background: 'rgba(0,0,0,0.6)',
         fontSize: '48px',
         fontWeight: 'bold',
+        textAlign: 'center',
+        whiteSpace: 'nowrap',
         color: '#fff',
         textShadow: '0 2px 8px rgba(0,0,0,0.8)',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
         opacity: '0',
         transition: 'opacity 120ms ease'
       });
@@ -427,7 +467,7 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       hud.style.opacity = '0';
-    }, 800);
+    }, HUD_AUTO_HIDE_DELAY_MS);
   }
 
   function bindMediaLifecycleInit(mediaCore, speedController) {
@@ -470,7 +510,7 @@
         const nextPlaybackRate = speedController.changePlaybackRate(playbackRateDelta);
         if (nextPlaybackRate !== false) {
           consume(event);
-          notify(`${nextPlaybackRate.toFixed(2)}x`);
+          notify(formatPlaybackRateLabel(nextPlaybackRate));
         }
         return;
       }
@@ -536,7 +576,10 @@
         location,
         videoState: videoInstanceState
       });
-      const speedController = createSpeedController({ mediaCore: media });
+      const speedController = createSpeedController({
+        mediaCore: media,
+        preferenceStore: globalPreferenceStore
+      });
       speedController.syncPlaybackRate();
       bindMediaLifecycleInit(media, speedController);
       cleanup = initKeymap({
