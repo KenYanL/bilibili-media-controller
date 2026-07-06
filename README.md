@@ -11,6 +11,8 @@ A lightweight Tampermonkey script for Bilibili video enhancement.
 - Shift+<: decrease playback speed by 0.25x
 - Shift+>: increase playback speed by 0.25x
 
+The list above covers shortcuts handled by this script. Native Bilibili player shortcuts such as `F` for fullscreen still work, but they are provided by Bilibili rather than this userscript.
+
 ## Scope
 
 Only runs on:
@@ -37,6 +39,8 @@ dist/bilibili-enhancer.user.js
 - K：播放/暂停
 - Shift+<：降低 0.25x 播放速度
 - Shift+>：提高 0.25x 播放速度
+
+上面这组是本脚本接管或增强的快捷键。像 `F` 这类 B 站播放器原生快捷键依然可用，但它们不是这个 userscript 实现的功能。
 
 ## 作用范围
 
