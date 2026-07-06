@@ -300,6 +300,15 @@
     }, 800);
   }
 
+  function bindMediaLifecycleInit(mediaCore) {
+    const activeMedia = mediaCore.getMedia();
+    if (!activeMedia) return;
+
+    activeMedia.addEventListener('loadedmetadata', () => {
+      mediaCore.getMedia();
+    }, { once: true });
+  }
+
   function initKeymap(options = {}) {
     const documentRef = options.document || document;
     const locationRef = options.location || window.location;
@@ -379,6 +388,7 @@
         videoState: videoInstanceState
       });
       media.getMedia();
+      bindMediaLifecycleInit(media);
       cleanup = initKeymap({
         document,
         location,

@@ -55,6 +55,15 @@ function notify(message) {
   }, 800);
 }
 
+function bindMediaLifecycleInit(mediaCore) {
+  const activeMedia = mediaCore.getMedia();
+  if (!activeMedia) return;
+
+  activeMedia.addEventListener('loadedmetadata', () => {
+    mediaCore.getMedia();
+  }, { once: true });
+}
+
 export function initBilibiliEnhancer() {
   if (location.hostname !== BILIBILI_HOST) return;
   if (!VIDEO_PATH_RE.test(location.pathname)) return;
@@ -69,6 +78,7 @@ export function initBilibiliEnhancer() {
       videoState: videoInstanceState
     });
     media.getMedia();
+    bindMediaLifecycleInit(media);
     cleanup = initKeymap({
       document,
       location,
