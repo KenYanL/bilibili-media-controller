@@ -128,6 +128,7 @@
       const nextPlaybackRate = clampPlaybackRate(value);
       state.playbackRate = nextPlaybackRate;
       media.playbackRate = nextPlaybackRate;
+      console.log('[Speed]', nextPlaybackRate);
       return nextPlaybackRate;
     }
 
@@ -348,6 +349,7 @@
   function mountHUD(hud, documentRef = document) {
     const root = getHudRoot(documentRef);
     if (!root || hud.parentElement === root) return;
+    console.log('[Root]', root);
     root.appendChild(hud);
   }
 
@@ -417,6 +419,11 @@
     updateHUDScale(hud);
     hud.textContent = message;
     hud.style.opacity = '1';
+    console.log('[HUD]', {
+      text: hud.textContent,
+      opacity: hud.style.opacity,
+      transform: hud.style.transform
+    });
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
       hud.style.opacity = '0';
@@ -443,6 +450,7 @@
     const media = options.media;
     const speedController = options.speedController || null;
     const subtitleToggle = options.toggleSubtitle;
+    const notify = options.notify || (() => {});
 
     if (!isBilibiliVideoPage(locationRef) || !media || !subtitleToggle) {
       return () => {};

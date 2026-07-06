@@ -31,6 +31,7 @@ export function createSpeedController(options = {}) {
     const nextPlaybackRate = clampPlaybackRate(value);
     state.playbackRate = nextPlaybackRate;
     media.playbackRate = nextPlaybackRate;
+    console.log('[Speed]', nextPlaybackRate);
     return nextPlaybackRate;
   }
 

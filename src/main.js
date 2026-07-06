@@ -43,6 +43,7 @@ export function getHudScale(viewport = {}) {
 function mountHUD(hud, documentRef = document) {
   const root = getHudRoot(documentRef);
   if (!root || hud.parentElement === root) return;
+  console.log('[Root]', root);
   root.appendChild(hud);
 }
 
@@ -112,6 +113,11 @@ function notify(hud, message) {
   updateHUDScale(hud);
   hud.textContent = message;
   hud.style.opacity = '1';
+  console.log('[HUD]', {
+    text: hud.textContent,
+    opacity: hud.style.opacity,
+    transform: hud.style.transform
+  });
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
     hud.style.opacity = '0';
