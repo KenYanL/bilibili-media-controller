@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         Bilibili Enhancer Lite
 // @namespace    https://github.com/yanlinwang/bilibili-enhancer-lite
-// @version      0.1.0
+// @version      0.1.3
 // @description  Bilibili-only subtitle toggle and lightweight media shortcuts.
 // @match        https://www.bilibili.com/video/*
+// @match        https://www.bilibili.com/festival/*
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -14,6 +15,7 @@
 
   const BILIBILI_HOST = 'www.bilibili.com';
   const VIDEO_PATH_RE = /^\/video\//;
+  const FESTIVAL_PATH_RE = /^\/festival\//;
   const HUD_ID = 'bilibili-enhancer-lite-hud';
   const PLAYER_ROOT_SELECTOR = [
     '.bpx-player-container',
@@ -29,6 +31,12 @@
     '.squirtle-subtitle-wrap > button',
     '.bpui-btn[title*="字幕"]'
   ].join(',');
+  const SUBTITLE_CLOSE_SELECTOR = '.bpx-player-ctrl-subtitle-close-switch[data-action="close"], .bpx-player-ctrl-subtitle-close-switch';
+  const SUBTITLE_RENDER_SELECTOR = [
+    '.bpx-player-subtitle-wrap',
+    '.bili-subtitle-x-subtitle-panel'
+  ].join(',');
+  const SUBTITLE_HIDDEN_DATA_KEY = 'bilibiliEnhancerSubtitleHidden';
   const DEFAULT_PLAYBACK_RATE = 1;
   const DEFAULT_PLAYBACK_RATE_STORAGE_KEY = 'bilibili-enhancer-lite.defaultPlaybackRate';
   const HUD_AUTO_HIDE_DELAY_MS = 300;
@@ -39,10 +47,17 @@
   const videoInstanceState = createVideoInstanceState({ preferenceStore: globalPreferenceStore });
 
   if (location.hostname !== BILIBILI_HOST) return;
-  if (!VIDEO_PATH_RE.test(location.pathname)) return;
+  if (!isBilibiliPlaybackPage(location)) return;
 
-  function isBilibiliVideoPage(locationRef = window.location) {
-    return locationRef.hostname === BILIBILI_HOST && VIDEO_PATH_RE.test(locationRef.pathname);
+  function hasBvidQuery(locationRef) {
+    const search = locationRef.search || '';
+    return new URLSearchParams(search).has('bvid');
+  }
+
+  function isBilibiliPlaybackPage(locationRef = window.location) {
+    if (locationRef.hostname !== BILIBILI_HOST) return false;
+    if (VIDEO_PATH_RE.test(locationRef.pathname)) return true;
+    return FESTIVAL_PATH_RE.test(locationRef.pathname) && hasBvidQuery(locationRef);
   }
 
   function ready(callback) {
@@ -188,7 +203,7 @@
   }
 
   function getScopedMedia(documentRef = document, locationRef = window.location) {
-    if (!isBilibiliVideoPage(locationRef)) return null;
+    if (!isBilibiliPlaybackPage(locationRef)) return null;
 
     const root = getPlayerRoot(documentRef);
     if (!root) return null;
@@ -288,6 +303,23 @@
     return true;
   }
 
+  function getSubtitleCloseButton(root) {
+    return root.querySelector(SUBTITLE_CLOSE_SELECTOR);
+  }
+
+  function toggleRenderedSubtitle(root) {
+    const subtitleRoots = [...root.querySelectorAll(SUBTITLE_RENDER_SELECTOR)];
+    if (!subtitleRoots.length) return null;
+
+    const dataset = root.dataset || {};
+    const shouldHide = dataset[SUBTITLE_HIDDEN_DATA_KEY] !== 'true';
+    subtitleRoots.forEach(element => {
+      element.style.visibility = shouldHide ? 'hidden' : '';
+    });
+    dataset[SUBTITLE_HIDDEN_DATA_KEY] = shouldHide ? 'true' : 'false';
+    return shouldHide ? 'off' : 'on';
+  }
+
   function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -296,7 +328,7 @@
     const documentRef = options.document || document;
     const locationRef = options.location || window.location;
 
-    if (!isBilibiliVideoPage(locationRef)) {
+    if (!isBilibiliPlaybackPage(locationRef)) {
       return { ok: false, action: 'ignored' };
     }
 
@@ -314,7 +346,7 @@
     }
 
     const activeLangItem = root.querySelector('.bpx-player-ctrl-subtitle-language-item.bpx-state-active');
-    const closeButton = root.querySelector('.bpx-player-ctrl-subtitle-close-switch[data-action="close"], .bpx-player-ctrl-subtitle-close-switch');
+    const closeButton = getSubtitleCloseButton(root);
     const preferredLangItem = root.querySelector([
       '.bpx-player-ctrl-subtitle-language-item[data-lan="ai-zh"]',
       '.bpx-player-ctrl-subtitle-language-item[data-lan="zh-CN"]',
@@ -322,7 +354,12 @@
     ].join(','));
     const firstLangItem = root.querySelector('.bpx-player-ctrl-subtitle-language-item[data-lan]');
 
-    if (activeLangItem && closeButton) {
+    if (activeLangItem) {
+      if (!closeButton) {
+        const action = toggleRenderedSubtitle(root);
+        return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle-renderer' };
+      }
+
       closeButton.click();
       return { ok: true, action: 'off' };
     }
@@ -492,7 +529,7 @@
     const subtitleToggle = options.toggleSubtitle;
     const notify = options.notify || (() => {});
 
-    if (!isBilibiliVideoPage(locationRef) || !media || !subtitleToggle) {
+    if (!isBilibiliPlaybackPage(locationRef) || !media || !subtitleToggle) {
       return () => {};
     }
 
@@ -501,7 +538,7 @@
     }
 
     function onKeyDown(event) {
-      if (!isBilibiliVideoPage(locationRef)) return;
+      if (!isBilibiliPlaybackPage(locationRef)) return;
       if (event.defaultPrevented || event.repeat) return;
       if (isEditableTarget(event.target, documentRef.activeElement)) return;
 
@@ -563,11 +600,11 @@
   }
 
   function initBilibiliEnhancer() {
-    if (!isBilibiliVideoPage()) return;
+    if (!isBilibiliPlaybackPage()) return;
     if (cleanup) cleanup();
 
     ready(() => {
-      if (!isBilibiliVideoPage()) return;
+      if (!isBilibiliPlaybackPage()) return;
 
       const hud = ensureHUD(document);
       const cleanupHUDLifecycle = bindHUDLifecycle(hud, document, window);

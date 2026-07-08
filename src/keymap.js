@@ -1,10 +1,6 @@
-const BILIBILI_HOST = 'www.bilibili.com';
-const VIDEO_PATH_RE = /^\/video\//;
-let cleanupKeymap = null;
+import { isBilibiliPlaybackPage } from './bilibili-page.js';
 
-function isBilibiliVideoPage(locationRef = window.location) {
-  return locationRef.hostname === BILIBILI_HOST && VIDEO_PATH_RE.test(locationRef.pathname);
-}
+let cleanupKeymap = null;
 
 function isEditableTarget(target, activeElement) {
   const element = target instanceof Element ? target : activeElement;
@@ -42,7 +38,7 @@ export function initKeymap(options = {}) {
   const toggleSubtitle = options.toggleSubtitle;
   const notify = options.notify || (() => {});
 
-  if (!isBilibiliVideoPage(locationRef) || !media || !toggleSubtitle) {
+  if (!isBilibiliPlaybackPage(locationRef) || !media || !toggleSubtitle) {
     return () => {};
   }
 
@@ -51,7 +47,7 @@ export function initKeymap(options = {}) {
   }
 
   function onKeyDown(event) {
-    if (!isBilibiliVideoPage(locationRef)) return;
+    if (!isBilibiliPlaybackPage(locationRef)) return;
     if (event.defaultPrevented || event.repeat) return;
     if (isEditableTarget(event.target, documentRef.activeElement)) return;
 

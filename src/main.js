@@ -1,21 +1,16 @@
+import { BILIBILI_HOST, isBilibiliPlaybackPage } from './bilibili-page.js';
 import { createMediaCore } from './media-core.js';
 import { createSpeedController } from './playback-speed-controller.js';
 import { toggleSubtitle } from './bilibili-subtitle.js';
 import { initKeymap } from './keymap.js';
 import { createGlobalPreferenceStore, createVideoInstanceState } from './playback-speed-state.js';
 
-const BILIBILI_HOST = 'www.bilibili.com';
-const VIDEO_PATH_RE = /^\/video\//;
 const HUD_ID = 'bilibili-enhancer-lite-hud';
 export const HUD_AUTO_HIDE_DELAY_MS = 300;
 let cleanup = null;
 let toastTimer = null;
 const globalPreferenceStore = createGlobalPreferenceStore();
 const videoInstanceState = createVideoInstanceState({ preferenceStore: globalPreferenceStore });
-
-function isBilibiliVideoPage(locationRef = window.location) {
-  return locationRef.hostname === BILIBILI_HOST && VIDEO_PATH_RE.test(locationRef.pathname);
-}
 
 function ready(callback) {
   if (document.readyState === 'loading') {
@@ -148,11 +143,11 @@ function bindMediaLifecycleInit(mediaCore, speedController) {
 
 export function initBilibiliEnhancer() {
   if (location.hostname !== BILIBILI_HOST) return;
-  if (!VIDEO_PATH_RE.test(location.pathname)) return;
+  if (!isBilibiliPlaybackPage(location)) return;
   if (cleanup) cleanup();
 
   ready(() => {
-    if (!isBilibiliVideoPage()) return;
+    if (!isBilibiliPlaybackPage()) return;
 
     const hud = ensureHUD(document);
     const cleanupHUDLifecycle = bindHUDLifecycle(hud, document, window);

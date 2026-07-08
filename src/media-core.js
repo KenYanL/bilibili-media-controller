@@ -1,5 +1,5 @@
-const BILIBILI_HOST = 'www.bilibili.com';
-const VIDEO_PATH_RE = /^\/video\//;
+import { isBilibiliPlaybackPage } from './bilibili-page.js';
+
 const PLAYER_ROOT_SELECTOR = [
   '.bpx-player-container',
   '#bilibili-player',
@@ -8,10 +8,6 @@ const PLAYER_ROOT_SELECTOR = [
   '#app'
 ].join(',');
 const MEDIA_SELECTOR = 'video, audio';
-
-function isBilibiliVideoPage(locationRef = window.location) {
-  return locationRef.hostname === BILIBILI_HOST && VIDEO_PATH_RE.test(locationRef.pathname);
-}
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -22,7 +18,7 @@ function getPlayerRoot(documentRef = document) {
 }
 
 function getScopedMedia(documentRef = document, locationRef = window.location) {
-  if (!isBilibiliVideoPage(locationRef)) return null;
+  if (!isBilibiliPlaybackPage(locationRef)) return null;
 
   const root = getPlayerRoot(documentRef);
   if (!root) return null;
