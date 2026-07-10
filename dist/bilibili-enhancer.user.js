@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili Enhancer Lite
 // @namespace    https://github.com/yanlinwang/bilibili-enhancer-lite
-// @version      0.1.3
+// @version      0.1.4
 // @description  Bilibili-only subtitle toggle and lightweight media shortcuts.
 // @match        https://www.bilibili.com/video/*
 // @match        https://www.bilibili.com/festival/*
@@ -49,15 +49,10 @@
   if (location.hostname !== BILIBILI_HOST) return;
   if (!isBilibiliPlaybackPage(location)) return;
 
-  function hasBvidQuery(locationRef) {
-    const search = locationRef.search || '';
-    return new URLSearchParams(search).has('bvid');
-  }
-
   function isBilibiliPlaybackPage(locationRef = window.location) {
     if (locationRef.hostname !== BILIBILI_HOST) return false;
     if (VIDEO_PATH_RE.test(locationRef.pathname)) return true;
-    return FESTIVAL_PATH_RE.test(locationRef.pathname) && hasBvidQuery(locationRef);
+    return FESTIVAL_PATH_RE.test(locationRef.pathname);
   }
 
   function ready(callback) {

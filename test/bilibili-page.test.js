@@ -16,6 +16,11 @@ assert.equal(isBilibiliPlaybackPage({
   hostname: 'www.bilibili.com',
   pathname: '/festival/worldcup',
   search: ''
+}), true);
+assert.equal(isBilibiliPlaybackPage({
+  hostname: 'www.bilibili.com',
+  pathname: '/',
+  search: ''
 }), false);
 assert.equal(isBilibiliPlaybackPage({
   hostname: 'www.youtube.com',
