@@ -20,6 +20,7 @@ The list above covers shortcuts handled by this script. Native Bilibili player s
 Only runs on:
 https://www.bilibili.com/video/*
 https://www.bilibili.com/festival/*
+https://www.bilibili.com/bangumi/play/*
 
 No impact on YouTube or other websites.
 
@@ -52,6 +53,7 @@ dist/bilibili-enhancer.user.js
 仅运行于：
 https://www.bilibili.com/video/*
 https://www.bilibili.com/festival/*
+https://www.bilibili.com/bangumi/play/*
 
 不会影响 YouTube 或其他网站。
 

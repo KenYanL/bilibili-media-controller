@@ -9,8 +9,8 @@ const locationRef = {
 };
 const originalWindow = globalThis.window;
 
-function createFixture({ closeSwitch = false } = {}) {
-  const panel = {};
+function createFixture({ activeLanguage = true, closeSwitch = false, subtitlePanel = true } = {}) {
+  const panel = subtitlePanel ? {} : null;
   const subtitleRenderer = {
     style: {}
   };
@@ -25,10 +25,10 @@ function createFixture({ closeSwitch = false } = {}) {
     dataset: {},
     querySelector(selector) {
       if (selector === '.bpx-player-ctrl-subtitle-box') return panel;
-      if (selector === '.bpx-player-ctrl-subtitle-language-item.bpx-state-active') return activeLangItem;
+      if (selector === '.bpx-player-ctrl-subtitle-language-item.bpx-state-active') return activeLanguage ? activeLangItem : null;
       if (selector.includes('.bpx-player-ctrl-subtitle-close-switch')) return closeSwitch ? closeButton : null;
-      if (selector.includes('.bpx-player-ctrl-subtitle-language-item[data-lan=')) return activeLangItem;
-      if (selector === '.bpx-player-ctrl-subtitle-language-item[data-lan]') return activeLangItem;
+      if (selector.includes('.bpx-player-ctrl-subtitle-language-item[data-lan=')) return activeLanguage ? activeLangItem : null;
+      if (selector === '.bpx-player-ctrl-subtitle-language-item[data-lan]') return activeLanguage ? activeLangItem : null;
       return null;
     },
     querySelectorAll(selector) {
@@ -72,6 +72,13 @@ assert.deepEqual(await toggleSubtitle({
   location: locationRef
 }), { ok: true, action: 'off' });
 assert.equal(closeFixture.closeButton.clicked, true);
+
+const rendererOnlyFixture = createFixture({ activeLanguage: false, subtitlePanel: false });
+assert.deepEqual(await toggleSubtitle({
+  document: rendererOnlyFixture.documentRef,
+  location: locationRef
+}), { ok: true, action: 'off' });
+assert.equal(rendererOnlyFixture.subtitleRenderer.style.visibility, 'hidden');
 
 globalThis.window = originalWindow;
 

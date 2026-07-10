@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Bilibili Enhancer Lite
 // @namespace    https://github.com/yanlinwang/bilibili-enhancer-lite
-// @version      0.1.4
+// @version      0.1.8
 // @description  Bilibili-only subtitle toggle and lightweight media shortcuts.
 // @match        https://www.bilibili.com/video/*
 // @match        https://www.bilibili.com/festival/*
+// @match        https://www.bilibili.com/bangumi/play/*
 // @run-at       document-start
 // @grant        none
 // @license      MIT
@@ -16,6 +17,7 @@
   const BILIBILI_HOST = 'www.bilibili.com';
   const VIDEO_PATH_RE = /^\/video\//;
   const FESTIVAL_PATH_RE = /^\/festival\//;
+  const BANGUMI_PLAY_PATH_RE = /^\/bangumi\/play\//;
   const HUD_ID = 'bilibili-enhancer-lite-hud';
   const PLAYER_ROOT_SELECTOR = [
     '.bpx-player-container',
@@ -46,12 +48,12 @@
   const globalPreferenceStore = createGlobalPreferenceStore();
   const videoInstanceState = createVideoInstanceState({ preferenceStore: globalPreferenceStore });
 
-  if (location.hostname !== BILIBILI_HOST) return;
   if (!isBilibiliPlaybackPage(location)) return;
 
   function isBilibiliPlaybackPage(locationRef = window.location) {
     if (locationRef.hostname !== BILIBILI_HOST) return false;
     if (VIDEO_PATH_RE.test(locationRef.pathname)) return true;
+    if (BANGUMI_PLAY_PATH_RE.test(locationRef.pathname)) return true;
     return FESTIVAL_PATH_RE.test(locationRef.pathname);
   }
 
@@ -335,7 +337,8 @@
     const panel = root.querySelector('.bpx-player-ctrl-subtitle-box');
     if (!panel || isHidden(panel)) {
       if (!clickSubtitleMenu(root)) {
-        return { ok: false, action: 'missing-subtitle-menu' };
+        const action = toggleRenderedSubtitle(root);
+        return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle-menu' };
       }
       await wait(150);
     }
@@ -364,6 +367,9 @@
       langItem.click();
       return { ok: true, action: 'on' };
     }
+
+    const action = toggleRenderedSubtitle(root);
+    if (action) return { ok: true, action };
 
     return { ok: false, action: 'missing-language' };
   }
@@ -502,18 +508,37 @@
     }, HUD_AUTO_HIDE_DELAY_MS);
   }
 
-  function bindMediaLifecycleInit(mediaCore, speedController) {
-    const activeMedia = mediaCore.getMedia();
-    if (!activeMedia) return;
+  function bindMediaLifecycleInit(mediaCore, speedController, documentRef = document) {
+    let activeMedia = null;
+    let cleanupMedia = () => {};
 
-    if (activeMedia.readyState >= HTMLMediaElement.HAVE_METADATA) {
-      speedController.syncPlaybackRate();
-      return;
-    }
+    const bindMedia = () => {
+      const nextMedia = mediaCore.getMedia();
+      if (!nextMedia || nextMedia === activeMedia) return;
 
-    activeMedia.addEventListener('loadedmetadata', () => {
-      speedController.syncPlaybackRate();
-    }, { once: true });
+      cleanupMedia();
+      activeMedia = nextMedia;
+      const syncPlaybackRate = () => speedController.syncPlaybackRate();
+      nextMedia.addEventListener('loadedmetadata', syncPlaybackRate, { once: true });
+      nextMedia.addEventListener('playing', syncPlaybackRate);
+      cleanupMedia = () => {
+        nextMedia.removeEventListener('loadedmetadata', syncPlaybackRate);
+        nextMedia.removeEventListener('playing', syncPlaybackRate);
+      };
+
+      if (nextMedia.readyState >= HTMLMediaElement.HAVE_METADATA) {
+        syncPlaybackRate();
+      }
+    };
+
+    bindMedia();
+    const observer = new MutationObserver(bindMedia);
+    observer.observe(documentRef.body, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      cleanupMedia();
+    };
   }
 
   function initKeymap(options = {}) {
@@ -612,8 +637,7 @@
         mediaCore: media,
         preferenceStore: globalPreferenceStore
       });
-      speedController.syncPlaybackRate();
-      bindMediaLifecycleInit(media, speedController);
+      const cleanupMediaLifecycle = bindMediaLifecycleInit(media, speedController, document);
       cleanup = initKeymap({
         document,
         location,
@@ -625,6 +649,7 @@
       const cleanupKeymap = cleanup;
       cleanup = () => {
         cleanupHUDLifecycle();
+        cleanupMediaLifecycle();
         cleanupKeymap();
       };
     });

@@ -1,4 +1,4 @@
-import { BILIBILI_HOST, isBilibiliPlaybackPage } from './bilibili-page.js';
+import { isBilibiliPlaybackPage } from './bilibili-page.js';
 import { createMediaCore } from './media-core.js';
 import { createSpeedController } from './playback-speed-controller.js';
 import { toggleSubtitle } from './bilibili-subtitle.js';
@@ -127,22 +127,40 @@ function notify(hud, message) {
   }, HUD_AUTO_HIDE_DELAY_MS);
 }
 
-function bindMediaLifecycleInit(mediaCore, speedController) {
-  const activeMedia = mediaCore.getMedia();
-  if (!activeMedia) return;
+export function bindMediaLifecycleInit(mediaCore, speedController, documentRef = document) {
+  let activeMedia = null;
+  let cleanupMedia = () => {};
 
-  if (activeMedia.readyState >= HTMLMediaElement.HAVE_METADATA) {
-    speedController.syncPlaybackRate();
-    return;
-  }
+  const bindMedia = () => {
+    const nextMedia = mediaCore.getMedia();
+    if (!nextMedia || nextMedia === activeMedia) return;
 
-  activeMedia.addEventListener('loadedmetadata', () => {
-    speedController.syncPlaybackRate();
-  }, { once: true });
+    cleanupMedia();
+    activeMedia = nextMedia;
+    const syncPlaybackRate = () => speedController.syncPlaybackRate();
+    nextMedia.addEventListener('loadedmetadata', syncPlaybackRate, { once: true });
+    nextMedia.addEventListener('playing', syncPlaybackRate);
+    cleanupMedia = () => {
+      nextMedia.removeEventListener('loadedmetadata', syncPlaybackRate);
+      nextMedia.removeEventListener('playing', syncPlaybackRate);
+    };
+
+    if (nextMedia.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      syncPlaybackRate();
+    }
+  };
+
+  bindMedia();
+  const observer = new MutationObserver(bindMedia);
+  observer.observe(documentRef.body, { childList: true, subtree: true });
+
+  return () => {
+    observer.disconnect();
+    cleanupMedia();
+  };
 }
 
 export function initBilibiliEnhancer() {
-  if (location.hostname !== BILIBILI_HOST) return;
   if (!isBilibiliPlaybackPage(location)) return;
   if (cleanup) cleanup();
 
@@ -160,8 +178,7 @@ export function initBilibiliEnhancer() {
       mediaCore: media,
       preferenceStore: globalPreferenceStore
     });
-    speedController.syncPlaybackRate();
-    bindMediaLifecycleInit(media, speedController);
+    const cleanupMediaLifecycle = bindMediaLifecycleInit(media, speedController, document);
     cleanup = initKeymap({
       document,
       location,
@@ -173,6 +190,7 @@ export function initBilibiliEnhancer() {
     const cleanupKeymap = cleanup;
     cleanup = () => {
       cleanupHUDLifecycle();
+      cleanupMediaLifecycle();
       cleanupKeymap();
     };
   });

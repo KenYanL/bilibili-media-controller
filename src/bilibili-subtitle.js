@@ -77,7 +77,8 @@ export async function toggleSubtitle(options = {}) {
   const panel = root.querySelector('.bpx-player-ctrl-subtitle-box');
   if (!panel || isHidden(panel)) {
     if (!clickSubtitleMenu(root)) {
-      return { ok: false, action: 'missing-subtitle-menu' };
+      const action = toggleRenderedSubtitle(root);
+      return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle-menu' };
     }
     await wait(150);
   }
@@ -106,6 +107,9 @@ export async function toggleSubtitle(options = {}) {
     langItem.click();
     return { ok: true, action: 'on' };
   }
+
+  const action = toggleRenderedSubtitle(root);
+  if (action) return { ok: true, action };
 
   return { ok: false, action: 'missing-language' };
 }
