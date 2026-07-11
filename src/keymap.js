@@ -25,6 +25,11 @@ export function formatPlaybackRateLabel(playbackRate) {
   return `>> ${Number(playbackRate).toFixed(2)}x`;
 }
 
+export function getSubtitleStatusLabel(result) {
+  if (result.ok) return result.action === 'off' ? 'Subtitles off' : 'Subtitles on';
+  return result.action === 'missing-subtitle' ? '没有字幕' : null;
+}
+
 function consume(event) {
   event.preventDefault();
   event.stopPropagation();
@@ -64,9 +69,8 @@ export function initKeymap(options = {}) {
     if (isPlainKey(event, 'c')) {
       consume(event);
       toggleSubtitle().then(result => {
-        if (result.ok) {
-          notify(result.action === 'off' ? 'Subtitles off' : 'Subtitles on');
-        }
+        const message = getSubtitleStatusLabel(result);
+        if (message) notify(message);
       });
       return;
     }

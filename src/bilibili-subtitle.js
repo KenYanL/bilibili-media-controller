@@ -45,11 +45,13 @@ function getSubtitleCloseButton(root) {
 }
 
 function toggleRenderedSubtitle(root) {
-  const subtitleRoots = [...root.querySelectorAll(SUBTITLE_RENDER_SELECTOR)];
+  const dataset = root.dataset || {};
+  const wasHidden = dataset[SUBTITLE_HIDDEN_DATA_KEY] === 'true';
+  const subtitleRoots = [...root.querySelectorAll(SUBTITLE_RENDER_SELECTOR)]
+    .filter(element => wasHidden || element.children.length > 0 || element.textContent.trim());
   if (!subtitleRoots.length) return null;
 
-  const dataset = root.dataset || {};
-  const shouldHide = dataset[SUBTITLE_HIDDEN_DATA_KEY] !== 'true';
+  const shouldHide = !wasHidden;
   subtitleRoots.forEach(element => {
     element.style.visibility = shouldHide ? 'hidden' : '';
   });
@@ -78,7 +80,7 @@ export async function toggleSubtitle(options = {}) {
   if (!panel || isHidden(panel)) {
     if (!clickSubtitleMenu(root)) {
       const action = toggleRenderedSubtitle(root);
-      return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle-menu' };
+      return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle' };
     }
     await wait(150);
   }
@@ -95,7 +97,7 @@ export async function toggleSubtitle(options = {}) {
   if (activeLangItem) {
     if (!closeButton) {
       const action = toggleRenderedSubtitle(root);
-      return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle-renderer' };
+      return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle' };
     }
 
     closeButton.click();
@@ -111,5 +113,5 @@ export async function toggleSubtitle(options = {}) {
   const action = toggleRenderedSubtitle(root);
   if (action) return { ok: true, action };
 
-  return { ok: false, action: 'missing-language' };
+  return { ok: false, action: 'missing-subtitle' };
 }

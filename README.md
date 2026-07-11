@@ -4,7 +4,7 @@ A lightweight Tampermonkey script for Bilibili video enhancement.
 
 ## Features
 
-- C: Toggle subtitles; pages without a Bilibili subtitle switch hide/show the subtitle layer directly
+- C: Toggle subtitles; shows `没有字幕` when none are available; pages without a Bilibili subtitle switch hide/show the subtitle layer directly
 - J: rewind 5s
 - L: forward 5s
 - K: play/pause
@@ -37,7 +37,7 @@ dist/bilibili-enhancer.user.js
 
 ## 功能
 
-- C：切换字幕；没有 B 站字幕开关的页面会直接隐藏/恢复字幕层
+- C：切换字幕；没有字幕时显示“没有字幕”；没有 B 站字幕开关的页面会直接隐藏/恢复字幕层
 - J：后退 5 秒
 - L：前进 5 秒
 - K：播放/暂停

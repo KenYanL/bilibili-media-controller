@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili Enhancer Lite
 // @namespace    https://github.com/yanlinwang/bilibili-enhancer-lite
-// @version      0.1.8
+// @version      0.1.9
 // @description  Bilibili-only subtitle toggle and lightweight media shortcuts.
 // @match        https://www.bilibili.com/video/*
 // @match        https://www.bilibili.com/festival/*
@@ -305,11 +305,13 @@
   }
 
   function toggleRenderedSubtitle(root) {
-    const subtitleRoots = [...root.querySelectorAll(SUBTITLE_RENDER_SELECTOR)];
+    const dataset = root.dataset || {};
+    const wasHidden = dataset[SUBTITLE_HIDDEN_DATA_KEY] === 'true';
+    const subtitleRoots = [...root.querySelectorAll(SUBTITLE_RENDER_SELECTOR)]
+      .filter(element => wasHidden || element.children.length > 0 || element.textContent.trim());
     if (!subtitleRoots.length) return null;
 
-    const dataset = root.dataset || {};
-    const shouldHide = dataset[SUBTITLE_HIDDEN_DATA_KEY] !== 'true';
+    const shouldHide = !wasHidden;
     subtitleRoots.forEach(element => {
       element.style.visibility = shouldHide ? 'hidden' : '';
     });
@@ -338,7 +340,7 @@
     if (!panel || isHidden(panel)) {
       if (!clickSubtitleMenu(root)) {
         const action = toggleRenderedSubtitle(root);
-        return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle-menu' };
+        return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle' };
       }
       await wait(150);
     }
@@ -355,7 +357,7 @@
     if (activeLangItem) {
       if (!closeButton) {
         const action = toggleRenderedSubtitle(root);
-        return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle-renderer' };
+        return action ? { ok: true, action } : { ok: false, action: 'missing-subtitle' };
       }
 
       closeButton.click();
@@ -371,7 +373,7 @@
     const action = toggleRenderedSubtitle(root);
     if (action) return { ok: true, action };
 
-    return { ok: false, action: 'missing-language' };
+    return { ok: false, action: 'missing-subtitle' };
   }
 
   function isEditableTarget(target, activeElement) {
@@ -395,6 +397,11 @@
 
   function formatPlaybackRateLabel(playbackRate) {
     return `>> ${Number(playbackRate).toFixed(2)}x`;
+  }
+
+  function getSubtitleStatusLabel(result) {
+    if (result.ok) return result.action === 'off' ? 'Subtitles off' : 'Subtitles on';
+    return result.action === 'missing-subtitle' ? '没有字幕' : null;
   }
 
   function consume(event) {
@@ -575,9 +582,8 @@
       if (isPlainKey(event, 'c')) {
         consume(event);
         subtitleToggle().then(result => {
-          if (result.ok) {
-            notify(result.action === 'off' ? 'Subtitles off' : 'Subtitles on');
-          }
+          const message = getSubtitleStatusLabel(result);
+          if (message) notify(message);
         });
         return;
       }

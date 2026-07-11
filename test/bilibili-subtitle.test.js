@@ -9,9 +9,11 @@ const locationRef = {
 };
 const originalWindow = globalThis.window;
 
-function createFixture({ activeLanguage = true, closeSwitch = false, subtitlePanel = true } = {}) {
+function createFixture({ activeLanguage = true, closeSwitch = false, rendererContent = true, subtitlePanel = true } = {}) {
   const panel = subtitlePanel ? {} : null;
   const subtitleRenderer = {
+    children: rendererContent ? [{}] : [],
+    textContent: '',
     style: {}
   };
   const activeLangItem = {};
@@ -79,6 +81,23 @@ assert.deepEqual(await toggleSubtitle({
   location: locationRef
 }), { ok: true, action: 'off' });
 assert.equal(rendererOnlyFixture.subtitleRenderer.style.visibility, 'hidden');
+rendererOnlyFixture.subtitleRenderer.children = [];
+assert.deepEqual(await toggleSubtitle({
+  document: rendererOnlyFixture.documentRef,
+  location: locationRef
+}), { ok: true, action: 'on' });
+assert.equal(rendererOnlyFixture.subtitleRenderer.style.visibility, '');
+
+const emptyRendererFixture = createFixture({
+  activeLanguage: false,
+  rendererContent: false,
+  subtitlePanel: false
+});
+assert.deepEqual(await toggleSubtitle({
+  document: emptyRendererFixture.documentRef,
+  location: locationRef
+}), { ok: false, action: 'missing-subtitle' });
+assert.equal(emptyRendererFixture.subtitleRenderer.style.visibility, undefined);
 
 globalThis.window = originalWindow;
 
