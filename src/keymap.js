@@ -27,7 +27,7 @@ export function formatPlaybackRateLabel(playbackRate) {
 
 export function getSubtitleStatusLabel(result) {
   if (result.ok) return result.action === 'off' ? 'Subtitles off' : 'Subtitles on';
-  return result.action === 'missing-subtitle' ? '没有字幕' : null;
+  return result.action === 'missing-subtitle' ? 'No subtitles' : null;
 }
 
 function consume(event) {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili Enhancer Lite
 // @namespace    https://github.com/yanlinwang/bilibili-enhancer-lite
-// @version      0.1.9
+// @version      0.1.10
 // @description  Bilibili-only subtitle toggle and lightweight media shortcuts.
 // @match        https://www.bilibili.com/video/*
 // @match        https://www.bilibili.com/festival/*
@@ -401,7 +401,7 @@
 
   function getSubtitleStatusLabel(result) {
     if (result.ok) return result.action === 'off' ? 'Subtitles off' : 'Subtitles on';
-    return result.action === 'missing-subtitle' ? '没有字幕' : null;
+    return result.action === 'missing-subtitle' ? 'No subtitles' : null;
   }
 
   function consume(event) {
