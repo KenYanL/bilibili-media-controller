@@ -34,4 +34,10 @@ assert.equal(media.playbackRate, 1.25);
 assert.equal(state.playbackRate, 1.25);
 assert.equal(preferenceStore.defaultPlaybackRate, 1.25);
 
+state.playbackRate = 2;
+preferenceStore.defaultPlaybackRate = 1;
+assert.equal(speedController.syncPlaybackRate(), 2);
+assert.equal(media.playbackRate, 2);
+assert.equal(preferenceStore.defaultPlaybackRate, 1);
+
 console.log('playback-speed-controller checks passed');

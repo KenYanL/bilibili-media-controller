@@ -26,13 +26,13 @@ export function createSpeedController(options = {}) {
     };
   }
 
-  function applyPlaybackRate(media, state, value) {
+  function applyPlaybackRate(media, state, value, persist) {
     if (!media || !state) return false;
 
     const nextPlaybackRate = clampPlaybackRate(value);
     state.playbackRate = nextPlaybackRate;
     media.playbackRate = nextPlaybackRate;
-    if (preferenceStore && typeof preferenceStore.setDefaultPlaybackRate === 'function') {
+    if (persist && preferenceStore && typeof preferenceStore.setDefaultPlaybackRate === 'function') {
       preferenceStore.setDefaultPlaybackRate(nextPlaybackRate);
     }
     console.log('[Speed]', nextPlaybackRate);
@@ -46,17 +46,17 @@ export function createSpeedController(options = {}) {
     },
     setPlaybackRate(value) {
       const { media, state } = getCurrentMediaState();
-      return applyPlaybackRate(media, state, value);
+      return applyPlaybackRate(media, state, value, true);
     },
     changePlaybackRate(delta) {
       const { media, state } = getCurrentMediaState();
       if (!media || !state) return false;
 
-      return applyPlaybackRate(media, state, state.playbackRate + delta);
+      return applyPlaybackRate(media, state, state.playbackRate + delta, true);
     },
     syncPlaybackRate() {
       const { media, state } = getCurrentMediaState();
-      return applyPlaybackRate(media, state, state ? state.playbackRate : null);
+      return applyPlaybackRate(media, state, state ? state.playbackRate : null, false);
     }
   };
 }
