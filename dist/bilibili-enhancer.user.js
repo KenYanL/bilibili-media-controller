@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili Enhancer Lite
 // @namespace    https://github.com/yanlinwang/bilibili-enhancer-lite
-// @version      0.1.11
+// @version      0.1.12
 // @description  Bilibili-only subtitle toggle and lightweight media shortcuts.
 // @match        https://www.bilibili.com/video/*
 // @match        https://www.bilibili.com/festival/*
@@ -407,9 +407,11 @@
   }
 
   function getPlaybackRateDelta(event) {
-    if (event.ctrlKey || event.metaKey || event.altKey || !event.shiftKey) return null;
-    if (event.key === '>') return 0.25;
-    if (event.key === '<') return -0.25;
+    if (!event || event.repeat || event.ctrlKey || event.metaKey || event.altKey || !event.shiftKey) return null;
+    // Chrome reports key ">" / "<". Safari on macOS often reports the unshifted key "." / ","
+    // with code Period / Comma, and may set keyCode and which to 0.
+    if (event.code === 'Period' || event.key === '>' || (event.key === '.' && event.code !== 'NumpadDecimal')) return 0.25;
+    if (event.code === 'Comma' || event.key === '<' || (event.key === ',' && event.code !== 'NumpadDecimal')) return -0.25;
     return null;
   }
 
@@ -428,14 +430,14 @@
   }
 
   const SPEED_GESTURE_MS = 500;
-  const SPEED_GESTURE_TYPES = ['mousedown', 'touchend', 'click', 'dblclick', 'gesturestart', 'gesturechange', 'gestureend'];
+  const SPEED_GESTURE_TYPES = ['mousedown', 'touchend', 'click', 'dblclick', 'gesturestart', 'gestureend'];
 
   function createSpeedGestureGuard() {
     return { until: 0, lastMouseAt: 0, lastTouchAt: 0 };
   }
 
   function noteSpeedGesture(guard, type, event = {}, now = Date.now()) {
-    if (type === 'dblclick' || type === 'gesturestart' || type === 'gesturechange' || type === 'gestureend') {
+    if (type === 'dblclick' || type === 'gesturestart' || type === 'gestureend') {
       guard.until = now + SPEED_GESTURE_MS;
       return guard;
     }
@@ -461,13 +463,11 @@
   }
 
   function isAccidentalPlaybackRateEvent(event, guard, now = Date.now()) {
-    // ponytail: Safari dblclick/double-tap zoom emits Shift+> (often code "" / keyCode 0)
-    // on the same gesture as fullscreen. Real Shift+. keeps code "Period". A physical
-    // key landing inside the 500ms gesture window is also ignored; press it again after.
-    if (guard && now < guard.until) return true;
-    if (event.code === '' || event.code === 'Unidentified') return true;
-    if (event.keyCode === 0 || event.which === 0) return true;
-    return false;
+    // ponytail: a real Shift+. keeps code Period/Comma. Safari may still set key to "."
+    // and keyCode/which to 0, so those are not a veto. The dblclick/zoom key has no
+    // physical code and is dropped only while that gesture window is open.
+    if (event.code === 'Period' || event.code === 'Comma') return false;
+    return Boolean(guard && now < guard.until);
   }
 
   function getHudRoot(documentRef = document) {

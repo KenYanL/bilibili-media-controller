@@ -20,35 +20,58 @@ assert.equal(getSubtitleStatusLabel({ ok: true, action: 'on' }), 'Subtitles on')
 assert.equal(getSubtitleStatusLabel({ ok: false, action: 'missing-subtitle' }), 'No subtitles');
 assert.equal(getSubtitleStatusLabel({ ok: false, action: 'missing-player' }), null);
 
-const realSpeedKey = { key: '>', code: 'Period', keyCode: 190, shiftKey: true, ctrlKey: false, metaKey: false, altKey: false };
-const guard = createSpeedGestureGuard();
-assert.equal(isAccidentalPlaybackRateEvent(realSpeedKey, guard, 1000), false);
-assert.equal(isAccidentalPlaybackRateEvent({ ...realSpeedKey, code: '' }, guard, 1000), true);
-assert.equal(isAccidentalPlaybackRateEvent({ ...realSpeedKey, code: 'Unidentified' }, guard, 1000), true);
-assert.equal(isAccidentalPlaybackRateEvent({ ...realSpeedKey, keyCode: 0 }, guard, 1000), true);
+const modifiers = { shiftKey: true, ctrlKey: false, altKey: false, metaKey: false, repeat: false };
+// Chrome keydown for the physical period/comma keys.
+const chromeShiftPeriod = { ...modifiers, key: '>', code: 'Period', keyCode: 190, which: 190 };
+const chromeShiftComma = { ...modifiers, key: '<', code: 'Comma', keyCode: 188, which: 188 };
+// Safari macOS often keeps the unshifted key and reports legacy keyCode/which as 0.
+const safariShiftPeriod = { ...modifiers, key: '.', code: 'Period', keyCode: 0, which: 0 };
+const safariShiftComma = { ...modifiers, key: ',', code: 'Comma', keyCode: 0, which: 0 };
+const safariShiftPeriodGreater = { ...modifiers, key: '>', code: 'Period', keyCode: 0, which: 0 };
+// Double-click/zoom synthesizes ">" with no physical code.
+const safariZoomKey = { ...modifiers, key: '>', code: '', keyCode: 0, which: 0 };
+const safariZoomKeyUnidentified = { ...modifiers, key: '>', code: 'Unidentified', keyCode: 0, which: 0 };
 
-noteSpeedGesture(guard, 'mousedown', {}, 1000);
-assert.equal(isAccidentalPlaybackRateEvent(realSpeedKey, guard, 1100), false);
-noteSpeedGesture(guard, 'mousedown', {}, 1200);
-noteSpeedGesture(guard, 'dblclick', {}, 1200);
-assert.equal(isAccidentalPlaybackRateEvent(realSpeedKey, guard, 1300), true);
-assert.equal(isAccidentalPlaybackRateEvent(realSpeedKey, guard, 1200 + 500), false);
+for (const event of [chromeShiftPeriod, safariShiftPeriod, safariShiftPeriodGreater]) {
+  assert.equal(getPlaybackRateDelta(event), 0.25);
+}
+for (const event of [chromeShiftComma, safariShiftComma]) {
+  assert.equal(getPlaybackRateDelta(event), -0.25);
+}
+assert.equal(getPlaybackRateDelta({ ...safariShiftPeriod, shiftKey: false }), null);
+
+const idle = createSpeedGestureGuard();
+for (const event of [chromeShiftPeriod, safariShiftPeriod, safariShiftComma, safariShiftPeriodGreater]) {
+  assert.equal(isAccidentalPlaybackRateEvent(event, idle, 1000), false);
+}
+
+const zooming = createSpeedGestureGuard();
+noteSpeedGesture(zooming, 'dblclick', {}, 1000);
+for (const event of [chromeShiftPeriod, safariShiftPeriod, safariShiftPeriodGreater, chromeShiftComma, safariShiftComma]) {
+  assert.equal(isAccidentalPlaybackRateEvent(event, zooming, 1100), false);
+}
+assert.equal(isAccidentalPlaybackRateEvent(safariZoomKey, zooming, 1100), true);
+assert.equal(isAccidentalPlaybackRateEvent(safariZoomKeyUnidentified, zooming, 1100), true);
+assert.equal(isAccidentalPlaybackRateEvent(safariZoomKey, zooming, 1000 + 500), false);
+assert.equal(isAccidentalPlaybackRateEvent(safariZoomKey, idle, 1100), false);
 
 const taps = createSpeedGestureGuard();
 noteSpeedGesture(taps, 'touchend', {}, 2000);
 noteSpeedGesture(taps, 'mousedown', {}, 2010);
-assert.equal(isAccidentalPlaybackRateEvent(realSpeedKey, taps, 2020), false);
+assert.equal(isAccidentalPlaybackRateEvent(safariZoomKey, taps, 2020), false);
 noteSpeedGesture(taps, 'touchend', {}, 2300);
-assert.equal(isAccidentalPlaybackRateEvent(realSpeedKey, taps, 2310), true);
+assert.equal(isAccidentalPlaybackRateEvent(safariZoomKey, taps, 2310), true);
+assert.equal(isAccidentalPlaybackRateEvent(safariShiftPeriod, taps, 2310), false);
 
-const zoom = createSpeedGestureGuard();
-noteSpeedGesture(zoom, 'gesturestart', {}, 3000);
-assert.equal(isAccidentalPlaybackRateEvent(realSpeedKey, zoom, 3100), true);
+const pinch = createSpeedGestureGuard();
+noteSpeedGesture(pinch, 'gesturestart', {}, 3000);
+assert.equal(isAccidentalPlaybackRateEvent(safariZoomKey, pinch, 3100), true);
+assert.equal(isAccidentalPlaybackRateEvent(chromeShiftPeriod, pinch, 3100), false);
 const secondClick = createSpeedGestureGuard();
 noteSpeedGesture(secondClick, 'click', { detail: 1 }, 4000);
-assert.equal(isAccidentalPlaybackRateEvent(realSpeedKey, secondClick, 4010), false);
+assert.equal(isAccidentalPlaybackRateEvent(safariZoomKey, secondClick, 4010), false);
 noteSpeedGesture(secondClick, 'click', { detail: 2 }, 4200);
-assert.equal(isAccidentalPlaybackRateEvent(realSpeedKey, secondClick, 4210), true);
+assert.equal(isAccidentalPlaybackRateEvent(safariZoomKey, secondClick, 4210), true);
 
 globalThis.Element = class Element {};
 const listeners = [];
@@ -94,12 +117,21 @@ function fire(type, event) {
   }
 }
 
-fire('keydown', realSpeedKey);
+fire('keydown', chromeShiftPeriod);
 assert.equal(changed, 1);
+fire('keydown', safariShiftPeriod);
+assert.equal(changed, 2);
+assert.equal(notice, '>> 1.25x');
+fire('keydown', safariShiftComma);
+assert.equal(changed, 3);
 fire('dblclick', {});
-fire('keydown', realSpeedKey);
-assert.equal(changed, 1);
-fire('keydown', { key: 'j' });
+fire('keydown', safariZoomKey);
+fire('keydown', safariZoomKeyUnidentified);
+assert.equal(changed, 3);
+fire('keydown', safariShiftPeriodGreater);
+fire('keydown', chromeShiftComma);
+assert.equal(changed, 5);
+fire('keydown', { key: 'j', repeat: false, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false });
 assert.equal(notice, '-5s');
 cleanup();
 assert.equal(listeners.length, 0);
