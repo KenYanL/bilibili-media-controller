@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili Enhancer Lite
 // @namespace    https://github.com/yanlinwang/bilibili-enhancer-lite
-// @version      0.1.10
+// @version      0.1.12
 // @description  Bilibili-only subtitle toggle and lightweight media shortcuts.
 // @match        https://www.bilibili.com/video/*
 // @match        https://www.bilibili.com/festival/*
@@ -41,6 +41,8 @@
   const SUBTITLE_HIDDEN_DATA_KEY = 'bilibiliEnhancerSubtitleHidden';
   const DEFAULT_PLAYBACK_RATE = 1;
   const DEFAULT_PLAYBACK_RATE_STORAGE_KEY = 'bilibili-enhancer-lite.defaultPlaybackRate';
+  const PLAYBACK_RATE_GUARD_KEY = 'bilibili-enhancer-lite.playbackRateGuard';
+  const STUCK_GESTURE_RATE = '1.25';
   const HUD_AUTO_HIDE_DELAY_MS = 300;
   let cleanupKeymap = null;
   let cleanup = null;
@@ -84,10 +86,26 @@
 
       try {
         const storedValue = storage.getItem(storageKey);
+        const migrated = storage.getItem(PLAYBACK_RATE_GUARD_KEY) === '1';
+        // ponytail: one-shot. Safari dblclick/zoom wrote exactly "1.25" before this guard.
+        // After the flag is stored, an intentional 1.25 is kept. Other saved rates are never cleared.
+        if (!migrated && storedValue === STUCK_GESTURE_RATE) {
+          if (typeof storage.removeItem === 'function') storage.removeItem(storageKey);
+          if (storage.getItem(storageKey) == null) persistGuardFlag();
+          return undefined;
+        }
+        if (!migrated) persistGuardFlag();
         return storedValue == null ? undefined : sanitizePlaybackRate(storedValue);
       } catch {
         return undefined;
       }
+    }
+
+    function persistGuardFlag() {
+      if (!storage || typeof storage.setItem !== 'function') return;
+      try {
+        storage.setItem(PLAYBACK_RATE_GUARD_KEY, '1');
+      } catch {}
     }
 
     function persistDefaultPlaybackRate(value) {
@@ -160,13 +178,13 @@
       };
     }
 
-    function applyPlaybackRate(media, state, value) {
+    function applyPlaybackRate(media, state, value, persist) {
       if (!media || !state) return false;
 
       const nextPlaybackRate = clampPlaybackRate(value);
       state.playbackRate = nextPlaybackRate;
       media.playbackRate = nextPlaybackRate;
-      if (preferenceStore && typeof preferenceStore.setDefaultPlaybackRate === 'function') {
+      if (persist && preferenceStore && typeof preferenceStore.setDefaultPlaybackRate === 'function') {
         preferenceStore.setDefaultPlaybackRate(nextPlaybackRate);
       }
       console.log('[Speed]', nextPlaybackRate);
@@ -180,17 +198,17 @@
       },
       setPlaybackRate(value) {
         const { media, state } = getCurrentMediaState();
-        return applyPlaybackRate(media, state, value);
+        return applyPlaybackRate(media, state, value, true);
       },
       changePlaybackRate(delta) {
         const { media, state } = getCurrentMediaState();
         if (!media || !state) return false;
 
-        return applyPlaybackRate(media, state, state.playbackRate + delta);
+        return applyPlaybackRate(media, state, state.playbackRate + delta, true);
       },
       syncPlaybackRate() {
         const { media, state } = getCurrentMediaState();
-        return applyPlaybackRate(media, state, state ? state.playbackRate : null);
+        return applyPlaybackRate(media, state, state ? state.playbackRate : null, false);
       }
     };
   }
@@ -389,9 +407,11 @@
   }
 
   function getPlaybackRateDelta(event) {
-    if (event.ctrlKey || event.metaKey || event.altKey || !event.shiftKey) return null;
-    if (event.key === '>') return 0.25;
-    if (event.key === '<') return -0.25;
+    if (!event || event.repeat || event.ctrlKey || event.metaKey || event.altKey || !event.shiftKey) return null;
+    // Chrome reports key ">" / "<". Safari on macOS often reports the unshifted key "." / ","
+    // with code Period / Comma, and may set keyCode and which to 0.
+    if (event.code === 'Period' || event.key === '>' || (event.key === '.' && event.code !== 'NumpadDecimal')) return 0.25;
+    if (event.code === 'Comma' || event.key === '<' || (event.key === ',' && event.code !== 'NumpadDecimal')) return -0.25;
     return null;
   }
 
@@ -407,6 +427,47 @@
   function consume(event) {
     event.preventDefault();
     event.stopPropagation();
+  }
+
+  const SPEED_GESTURE_MS = 500;
+  const SPEED_GESTURE_TYPES = ['mousedown', 'touchend', 'click', 'dblclick', 'gesturestart', 'gestureend'];
+
+  function createSpeedGestureGuard() {
+    return { until: 0, lastMouseAt: 0, lastTouchAt: 0 };
+  }
+
+  function noteSpeedGesture(guard, type, event = {}, now = Date.now()) {
+    if (type === 'dblclick' || type === 'gesturestart' || type === 'gestureend') {
+      guard.until = now + SPEED_GESTURE_MS;
+      return guard;
+    }
+
+    if (type === 'click' && event.detail >= 2) {
+      guard.until = now + SPEED_GESTURE_MS;
+      return guard;
+    }
+
+    if (type === 'touchend') {
+      if (guard.lastTouchAt && now - guard.lastTouchAt <= SPEED_GESTURE_MS) guard.until = now + SPEED_GESTURE_MS;
+      guard.lastTouchAt = now;
+      return guard;
+    }
+
+    // A touch tap also synthesizes mousedown. Don't count that pair as a double-click.
+    if (type === 'mousedown' && !(guard.lastTouchAt && now - guard.lastTouchAt <= SPEED_GESTURE_MS + 200)) {
+      if (guard.lastMouseAt && now - guard.lastMouseAt <= SPEED_GESTURE_MS) guard.until = now + SPEED_GESTURE_MS;
+      guard.lastMouseAt = now;
+    }
+
+    return guard;
+  }
+
+  function isAccidentalPlaybackRateEvent(event, guard, now = Date.now()) {
+    // ponytail: a real Shift+. keeps code Period/Comma. Safari may still set key to "."
+    // and keyCode/which to 0, so those are not a veto. The dblclick/zoom key has no
+    // physical code and is dropped only while that gesture window is open.
+    if (event.code === 'Period' || event.code === 'Comma') return false;
+    return Boolean(guard && now < guard.until);
   }
 
   function getHudRoot(documentRef = document) {
@@ -564,6 +625,9 @@
       cleanupKeymap();
     }
 
+    const speedGestureGuard = createSpeedGestureGuard();
+    const onSpeedGesture = event => noteSpeedGesture(speedGestureGuard, event.type, event);
+
     function onKeyDown(event) {
       if (!isBilibiliPlaybackPage(locationRef)) return;
       if (event.defaultPrevented || event.repeat) return;
@@ -571,6 +635,7 @@
 
       const playbackRateDelta = getPlaybackRateDelta(event);
       if (playbackRateDelta !== null && speedController) {
+        if (isAccidentalPlaybackRateEvent(event, speedGestureGuard)) return;
         const nextPlaybackRate = speedController.changePlaybackRate(playbackRateDelta);
         if (nextPlaybackRate !== false) {
           consume(event);
@@ -615,9 +680,11 @@
 
     }
 
+    for (const type of SPEED_GESTURE_TYPES) documentRef.addEventListener(type, onSpeedGesture, true);
     documentRef.addEventListener('keydown', onKeyDown);
 
     cleanupKeymap = () => {
+      for (const type of SPEED_GESTURE_TYPES) documentRef.removeEventListener(type, onSpeedGesture, true);
       documentRef.removeEventListener('keydown', onKeyDown);
       cleanupKeymap = null;
     };
