@@ -16,6 +16,10 @@ A lightweight Tampermonkey script for Bilibili video enhancement.
 
 The list above covers shortcuts handled by this script. Native Bilibili player shortcuts such as `F` for fullscreen still work, but they are provided by Bilibili rather than this userscript.
 
+## Notes
+
+Shortcuts need an English input method. With a Chinese IME such as Pinyin active, the IME captures key presses and this script does not receive them. Switch to English input first (for example Shift or Caps Lock, depending on the IME).
+
 ## Scope
 
 Only runs on:
@@ -49,6 +53,10 @@ dist/bilibili-enhancer.user.js
 - 双击或双点缩放/全屏不会改变播放速度。Safari 这个误触留下的 1.25x 会在更新后重置一次；之后再设成 1.25x 仍会记住
 
 上面这组是本脚本接管或增强的快捷键。像 `F` 这类 B 站播放器原生快捷键依然可用，但它们不是这个 userscript 实现的功能。
+
+## 注意
+
+快捷键需要英文输入法。中文输入法（例如拼音）开启时，按键会被输入法截获，脚本收不到。使用快捷键前先切到英文输入（例如按 Shift 或 Caps Lock，视输入法而定）。
 
 ## 作用范围
 
