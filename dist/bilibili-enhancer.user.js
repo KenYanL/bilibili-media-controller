@@ -1,14 +1,19 @@
 // ==UserScript==
 // @name         Bilibili Enhancer Lite
-// @namespace    https://github.com/yanlinwang/bilibili-enhancer-lite
-// @version      0.1.13
+// @namespace    https://github.com/KenYanL/bilibili-media-controller
+// @version      0.1.14
+// @author       KenYanL
 // @description  Bilibili-only subtitle toggle and lightweight media shortcuts.
+// @homepageURL  https://greasyfork.org/scripts/585823-bilibili-enhancer-lite
+// @supportURL   https://github.com/KenYanL/bilibili-media-controller/issues
 // @match        https://www.bilibili.com/video/*
 // @match        https://www.bilibili.com/festival/*
 // @match        https://www.bilibili.com/bangumi/play/*
 // @run-at       document-start
 // @grant        none
 // @license      MIT
+// @downloadURL  https://raw.githubusercontent.com/KenYanL/bilibili-media-controller/main/dist/bilibili-enhancer.user.js
+// @updateURL    https://raw.githubusercontent.com/KenYanL/bilibili-media-controller/main/dist/bilibili-enhancer.user.js
 // ==/UserScript==
 
 (function () {

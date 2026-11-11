@@ -31,8 +31,11 @@ No impact on YouTube or other websites.
 
 ## Installation
 
-Install via Tampermonkey:
-dist/bilibili-enhancer.user.js
+Install with Tampermonkey from:
+
+https://raw.githubusercontent.com/KenYanL/bilibili-media-controller/main/dist/bilibili-enhancer.user.js
+
+The script file in this repository is `dist/bilibili-enhancer.user.js`. It is also listed on [Greasy Fork](https://greasyfork.org/en/scripts/585823-bilibili-enhancer-lite).
 
 ---
 
@@ -70,4 +73,7 @@ https://www.bilibili.com/bangumi/play/*
 ## 安装
 
 通过 Tampermonkey 安装：
-dist/bilibili-enhancer.user.js
+
+https://raw.githubusercontent.com/KenYanL/bilibili-media-controller/main/dist/bilibili-enhancer.user.js
+
+仓库中的脚本文件是 `dist/bilibili-enhancer.user.js`。也可以在 [Greasy Fork](https://greasyfork.org/en/scripts/585823-bilibili-enhancer-lite) 安装。
