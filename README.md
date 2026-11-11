@@ -16,6 +16,24 @@ A lightweight Tampermonkey script for Bilibili video enhancement.
 
 The list above covers shortcuts handled by this script. Native Bilibili player shortcuts such as `F` for fullscreen still work, but they are provided by Bilibili rather than this userscript.
 
+## Native Bilibili shortcuts (not from this script)
+
+These are built into Bilibili's player and work with or without this script.
+
+| Key | Action |
+| --- | --- |
+| Space | Play/pause |
+| ← / → | Rewind / forward 5s (hold → to speed up temporarily) |
+| ↑ / ↓ | Volume +10% / -10% |
+| F / Esc | Enter or exit fullscreen / exit fullscreen |
+| D | Toggle danmaku (bullet comments) |
+| M | Toggle mute |
+| Enter | Send a danmaku |
+| Shift+1 / Shift+2 | 1x / 2x speed |
+| [ / ] | Previous / next part (multi-part videos) |
+
+> ⚠️ **Watch out for accidental clicks.** These native keys act on your account immediately: **G follows the uploader** (it sits right next to D), **Q likes** (hold Q or R for like + coin + favorite), **W gives a coin**, **E adds to favorites**. If you suddenly find yourself following someone, you probably hit G instead of D.
+
 ## Notes
 
 Shortcuts need an English input method. With a Chinese IME such as Pinyin active, the IME captures key presses and this script does not receive them. Switch to English input first (for example Shift or Caps Lock, depending on the IME).
@@ -56,6 +74,24 @@ The script file in this repository is `dist/bilibili-enhancer.user.js`. It is al
 - 双击或双点缩放/全屏不会改变播放速度。Safari 这个误触留下的 1.25x 会在更新后重置一次；之后再设成 1.25x 仍会记住
 
 上面这组是本脚本接管或增强的快捷键。像 `F` 这类 B 站播放器原生快捷键依然可用，但它们不是这个 userscript 实现的功能。
+
+## B 站自带快捷键（不是本脚本提供的）
+
+这些是 B 站播放器自带的，装不装本脚本都能用。
+
+| 按键 | 作用 |
+| --- | --- |
+| 空格 | 播放/暂停 |
+| ← / → | 后退 / 前进 5 秒（长按 → 临时倍速） |
+| ↑ / ↓ | 音量 +10% / -10% |
+| F / Esc | 进入或退出全屏 / 退出全屏 |
+| D | 开关弹幕 |
+| M | 开关静音 |
+| Enter | 发弹幕 |
+| Shift+1 / Shift+2 | 一倍速 / 两倍速 |
+| [ / ] | 多 P 上一个 / 下一个 |
+
+> ⚠️ **小心误触。** 下面这些键会直接作用在你的账号上：**G 是关注 UP 主**（就在 D 旁边），**Q 点赞**（长按 Q 或 R 一键三连），**W 投币**，**E 收藏**。如果莫名其妙关注了某个 UP 主，多半是想按 D 时按到了 G。
 
 ## 注意
 
