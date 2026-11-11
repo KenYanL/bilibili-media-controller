@@ -12,7 +12,7 @@ assert.match(header, /^\/\/ ==UserScript==$/m);
 assert.match(header, new RegExp(`^// @namespace\\s+${repo}$`, 'm'));
 assert.match(header, /^\/\/ @version\s+0\.1\.14$/m);
 assert.match(header, /^\/\/ @author\s+KenYanL$/m);
-assert.match(header, new RegExp(`^// @homepageURL\\s+${repo}$`, 'm'));
+assert.match(header, /^\/\/ @homepageURL\s+https:\/\/greasyfork\.org\/scripts\/585823-bilibili-enhancer-lite$/m);
 assert.match(header, new RegExp(`^// @supportURL\\s+${repo}/issues$`, 'm'));
 assert.match(header, /^\/\/ @license\s+MIT$/m);
 assert.match(header, new RegExp(`^// @downloadURL\\s+${rawScript}$`, 'm'));
