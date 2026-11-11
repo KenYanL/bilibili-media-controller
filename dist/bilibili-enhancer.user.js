@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili Enhancer Lite
 // @namespace    https://github.com/yanlinwang/bilibili-enhancer-lite
-// @version      0.1.12
+// @version      0.1.13
 // @description  Bilibili-only subtitle toggle and lightweight media shortcuts.
 // @match        https://www.bilibili.com/video/*
 // @match        https://www.bilibili.com/festival/*
@@ -480,12 +480,13 @@
   }
 
   function getHudScale(viewport = {}) {
-    const width = viewport.width ?? window.innerWidth;
-    const height = viewport.height ?? window.innerHeight;
+    const view = globalThis.window;
+    const width = viewport.width ?? view?.innerWidth ?? 1920;
+    const height = viewport.height ?? view?.innerHeight ?? 1080;
     return Math.min(width / 1920, height / 1080);
   }
 
-  function mountHUD(hud, documentRef = document) {
+  function mountHUD(hud, documentRef = hud.ownerDocument || globalThis.document) {
     const root = getHudRoot(documentRef);
     if (!root || hud.parentElement === root) return;
     console.log('[Root]', root);
@@ -497,6 +498,33 @@
     hud.style.transform = `translate(-50%, -50%) scale(${scale})`;
   }
 
+  function setImportantStyle(style, name, value) {
+    if (typeof style.setProperty === 'function') {
+      style.setProperty(name, value, 'important');
+      return;
+    }
+    const camel = name.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    style[camel] = value;
+  }
+
+  // Keep the idle HUD out of hit-testing. opacity:0 plus pointer-events:none is
+  // not enough in Safari when the player stretches this node over the end-screen
+  // related-video grid, which can leave only the first card clickable.
+  function setHudVisible(hud, visible) {
+    const style = hud.style;
+    style.opacity = visible ? '1' : '0';
+    style.pointerEvents = 'none';
+    style.visibility = visible ? 'visible' : 'hidden';
+    style.width = 'auto';
+    style.height = 'auto';
+    style.flex = 'none';
+    setImportantStyle(style, 'pointer-events', 'none');
+    setImportantStyle(style, 'visibility', visible ? 'visible' : 'hidden');
+    setImportantStyle(style, 'width', 'auto');
+    setImportantStyle(style, 'height', 'auto');
+    setImportantStyle(style, 'flex', 'none');
+  }
+
   function ensureHUD(documentRef = document) {
     let hud = documentRef.querySelector(`#${HUD_ID}`);
     if (!hud) {
@@ -506,9 +534,17 @@
         position: 'fixed',
         top: '50%',
         left: '50%',
+        right: 'auto',
+        bottom: 'auto',
+        width: 'auto',
+        height: 'auto',
+        margin: '0',
+        flex: 'none',
+        alignSelf: 'center',
         transform: 'translate(-50%, -50%)',
         zIndex: '999999',
         pointerEvents: 'none',
+        visibility: 'hidden',
         minWidth: '220px',
         padding: '18px 28px',
         borderRadius: '8px',
@@ -523,6 +559,7 @@
         opacity: '0',
         transition: 'opacity 120ms ease'
       });
+      setHudVisible(hud, false);
     }
 
     mountHUD(hud, documentRef);
@@ -564,7 +601,7 @@
     mountHUD(hud);
     updateHUDScale(hud);
     hud.textContent = message;
-    hud.style.opacity = '1';
+    setHudVisible(hud, true);
     console.log('[HUD]', {
       text: hud.textContent,
       opacity: hud.style.opacity,
@@ -572,7 +609,7 @@
     });
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
-      hud.style.opacity = '0';
+      setHudVisible(hud, false);
     }, HUD_AUTO_HIDE_DELAY_MS);
   }
 
