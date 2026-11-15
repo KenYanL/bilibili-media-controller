@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili Enhancer Lite
 // @namespace    https://github.com/KenYanL/bilibili-media-controller
-// @version      0.1.15
+// @version      0.1.16
 // @author       KenYanL
 // @description  Bilibili-only subtitle toggle and lightweight media shortcuts.
 // @homepageURL  https://greasyfork.org/scripts/585823-bilibili-enhancer-lite
@@ -606,6 +606,28 @@
     }, HUD_AUTO_HIDE_DELAY_MS);
   }
 
+  // In Safari fullscreen (Bilibili's web fullscreen on the player container, or
+  // Safari's own <video> fullscreen) the end-screen cards can't be clicked: Safari
+  // keeps its Live Text / Translate video layer on top. They do work outside
+  // fullscreen, so when the video has really ended, leave fullscreen.
+  // ponytail: the delay skips Bilibili's autoplay-next (media is no longer ended by then).
+  const END_FULLSCREEN_EXIT_DELAY_MS = 500;
+  function exitFullscreenOnEnd(event) {
+    const media = event.currentTarget;
+    setTimeout(() => {
+      if (!media.ended) return;
+      const doc = media.ownerDocument;
+      const fsElement = doc.fullscreenElement || doc.webkitFullscreenElement;
+      if (fsElement && (fsElement === media || fsElement.contains(media))) {
+        const exit = doc.exitFullscreen || doc.webkitExitFullscreen;
+        const result = exit && exit.call(doc);
+        if (result && typeof result.catch === 'function') result.catch(() => {});
+      } else if (media.webkitDisplayingFullscreen && typeof media.webkitExitFullscreen === 'function') {
+        media.webkitExitFullscreen();
+      }
+    }, END_FULLSCREEN_EXIT_DELAY_MS);
+  }
+
   function bindMediaLifecycleInit(mediaCore, speedController, documentRef = document) {
     let activeMedia = null;
     let cleanupMedia = () => {};
@@ -619,9 +641,11 @@
       const syncPlaybackRate = () => speedController.syncPlaybackRate();
       nextMedia.addEventListener('loadedmetadata', syncPlaybackRate, { once: true });
       nextMedia.addEventListener('playing', syncPlaybackRate);
+      nextMedia.addEventListener('ended', exitFullscreenOnEnd);
       cleanupMedia = () => {
         nextMedia.removeEventListener('loadedmetadata', syncPlaybackRate);
         nextMedia.removeEventListener('playing', syncPlaybackRate);
+        nextMedia.removeEventListener('ended', exitFullscreenOnEnd);
       };
 
       if (nextMedia.readyState >= HTMLMediaElement.HAVE_METADATA) {
