@@ -113,38 +113,24 @@ export function ensureHUD(documentRef = document) {
     setHudVisible(hud, false);
   }
 
-  mountHUD(hud, documentRef);
-  updateHUDScale(hud);
   return hud;
 }
 
 function bindHUDLifecycle(hud, documentRef = document, windowRef = window) {
+  // Only a HUD that is on screen right now needs to follow fullscreen/resize.
   const reattach = () => {
-    const root = getHudRoot(documentRef);
-    if (!root) return;
-    if (!root.contains(hud)) {
-      root.appendChild(hud);
-    }
+    if (!hud.isConnected) return;
+    mountHUD(hud, documentRef);
     updateHUDScale(hud);
   };
 
   documentRef.addEventListener('fullscreenchange', reattach);
   windowRef.addEventListener('resize', reattach);
 
-  const observer = new MutationObserver(() => {
-    reattach();
-  });
-  observer.observe(documentRef.body, {
-    childList: true,
-    subtree: true
-  });
-
-  reattach();
-
   return () => {
     documentRef.removeEventListener('fullscreenchange', reattach);
     windowRef.removeEventListener('resize', reattach);
-    observer.disconnect();
+    hud.remove();
   };
 }
 
@@ -159,8 +145,10 @@ export function notify(hud, message) {
     transform: hud.style.transform
   });
   clearTimeout(toastTimer);
+  // Detach when idle so nothing of ours sits over the player (e.g. the end-screen grid).
   toastTimer = setTimeout(() => {
     setHudVisible(hud, false);
+    hud.remove();
   }, HUD_AUTO_HIDE_DELAY_MS);
 }
 

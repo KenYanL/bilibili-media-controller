@@ -61,6 +61,17 @@ function createElement(tagName, className = '') {
       this.children.push(child);
       return child;
     },
+    remove() {
+      if (!this.parentElement) return;
+      const siblings = this.parentElement.children;
+      siblings.splice(siblings.indexOf(this), 1);
+      this.parentElement = null;
+    },
+    get isConnected() {
+      let node = this;
+      while (node.parentElement) node = node.parentElement;
+      return node === documentBody;
+    },
     contains(node) {
       if (node === this) return true;
       return this.children.some(child => child.contains(node));
@@ -193,7 +204,8 @@ function isHudClickTransparent(hud) {
 }
 
 const hud = ensureHUD(documentRef);
-assert.equal(hud.parentElement, player);
+// Idle HUD is not in the DOM at all, so it can never cover the end-screen grid.
+assert.equal(hud.parentElement, null);
 assert.equal(isHudClickTransparent(hud), true);
 assert.equal(hud.style.width, 'auto');
 assert.equal(hud.style.height, 'auto');
@@ -255,11 +267,14 @@ setHudVisible(hud, false);
 assert.equal(isHudClickTransparent(hud), true);
 
 notify(hud, '>> 1.25x');
+assert.equal(hud.parentElement, player);
 assert.equal(hud.style.visibility, 'visible');
 assert.equal(hud.style.opacity, '1');
 assert.equal(hud.style.pointerEvents, 'none');
 await new Promise(resolve => setTimeout(resolve, HUD_AUTO_HIDE_DELAY_MS + 30));
 assert.equal(isHudClickTransparent(hud), true);
+assert.equal(hud.parentElement, null);
+assert.equal(player.contains(hud), false);
 
 clicked.length = 0;
 for (const card of cards.slice(1)) dispatch(card, 'click', { detail: 1 });
