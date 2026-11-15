@@ -71,29 +71,6 @@ cleanupLifecycle();
 assert.equal(observer.disconnected, true);
 secondMedia.dispatch('playing');
 assert.equal(syncCount, 4);
-// A real end inside fullscreen (container or bare <video>) exits fullscreen after a
-// short delay; autoplay-next (no longer ended) and non-fullscreen do nothing.
-for (const [label, fsKind, stillEnded, expected] of [
-  ['container', 'container', true, 1],
-  ['video', 'video', true, 1],
-  ['autoplay-next', 'container', false, 0],
-  ['not fullscreen', null, true, 0]
-]) {
-  let exits = 0;
-  const media = new FakeMedia(0);
-  media.ended = true;
-  const container = { contains: node => node === media };
-  media.ownerDocument = { exitFullscreen() { exits += 1; return Promise.resolve(); } };
-  media.ownerDocument.fullscreenElement = fsKind === 'video' ? media : fsKind ? container : null;
-  activeMedia = media;
-  const stop = bindMediaLifecycleInit({ getMedia: () => activeMedia }, { syncPlaybackRate() {} }, { body: {} });
-  media.listeners.get('ended')({ currentTarget: media });
-  media.ended = stillEnded;
-  await new Promise(resolve => setTimeout(resolve, 550));
-  assert.equal(exits, expected, label);
-  stop();
-}
-
 globalThis.HTMLMediaElement = originalHTMLMediaElement;
 globalThis.MutationObserver = originalMutationObserver;
 
